@@ -19,7 +19,7 @@ import mutil
 import model
 
 
-gpu = 4
+gpu = 0
 ngpu = 2
 
 torch.cuda.set_device(gpu)
@@ -81,6 +81,11 @@ ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
 
 criterion = nn.BCELoss()
+c_label\
+    = np.zeros(shape=[mb_size, y_dim], dtype='float32')
+
+for i in range(0, 60, 6):
+    c_label[i:(i + 6), i / 6] = 1.
 
 
 
@@ -100,7 +105,7 @@ for it in range(100000):
     X = Variable(torch.from_numpy(X)).cuda()
     label_m = np.nonzero(c)[1]
     c_v = Variable(torch.from_numpy(c.astype('float32'))).cuda()
-    c_list = [Variable(torch.from_numpy(model.set_label_5d((label_m+i)%d_num).astype('float32'))).cuda() for i in range(d_num)]
+    c_list = [Variable(torch.from_numpy(model.set_label_ve((label_m+i)%d_num).astype('float32'))).cuda() for i in range(d_num)]
 
 
     # Dicriminator forward-loss-backward-update
@@ -162,9 +167,7 @@ for it in range(100000):
         for i in range(d_num):
             print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {}'.format(it, D_loss_real_list[i].data.tolist(),
                                                                         D_loss_fake_list[i].data.tolist(), G_loss.data.tolist()))
-        c = np.zeros(shape=[mb_size, y_dim], dtype='float32')
-        for i in range(0,6,60):
-            c[:, i:(i+6)] = i/6.
+        c = c_label
         c_v = Variable(torch.from_numpy(c.astype('float32'))).cuda()
         x_g = torch.cat([z, c_v], 1).t()
         x_g.data.resize_(mb_size, Z_dim + 10, 1, 1)
@@ -173,7 +176,7 @@ for it in range(100000):
 
         samples = samples.data.tolist()[:60]
 
-        fig = plt.figure(figsize=(10, 6))
+        fig = plt.figure(figsize=(6, 10))
         gs = gridspec.GridSpec(10, 6)
         gs.update(wspace=0.05, hspace=0.05)
 
