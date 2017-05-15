@@ -1,3 +1,4 @@
+# pylint: skip-file
 import torch
 from torchvision import datasets, transforms
 import numpy as np
@@ -5,9 +6,7 @@ from random import randrange
 import random
 import owntool
 from torch.utils.serialization import load_lua
-import os,sys
-import shutil
-
+from pytimer import Timer
 
 class owndata():
     def __init__(self):
@@ -133,6 +132,7 @@ class cifar10():
 # for i in range(10):
 #     print(mm.batch_next(10,[0,1,2,3,4,5,6,7,8,9],True))
 # [a,b] = mm.batch_next(50,[0,1,2,3,4])
+
 class celebA():
     def __init__(self):
         data_dir = '/home/bike/data/celebA/images.dmp'
@@ -157,37 +157,14 @@ class celebA():
             k = k * 2
         return  dec_label
 
-    def get_neigbor(self, vec):
-        all_neighbor = (np.zeros([19,18])).astype('int')
-        ve_size = 18
-        all_neighbor[0,:]= vec.astype('int')
-        # ve_size = np.shape(vec)[0]
-        for i in range(ve_size):
-            tmp_vec = vec.copy()
-            if(tmp_vec[i]==0):
-                tmp_vec[i] = 1
-            else:
-                tmp_vec[i] = 0
-            all_neighbor[i+1] = tmp_vec
-
-        return self.vec2num(all_neighbor)
-
-    def batch_next(self, batch_size, label, shuffle=True, Negative =False, Neigbor=False):
+    def batch_next(self, batch_size, label, shuffle=True, Negative =False):
         # the size of the label == batch_size                 ( since we have so many labels)
         if(Negative):
-            label = np.array(label.tolist())
-            label_index = (self.vec2num(label))
+            label_index = (self.vec2num(label)).tolist()
             pic_list = torch.FloatTensor(batch_size, 3, 64, 64)
             label_list = torch.FloatTensor(batch_size, 18)
             for i in range(batch_size):
-                if(Neigbor):
-                    ii = []
-                    label_index_group = (self.get_neigbor(label[i]))
-                    for j in range(label_index_group.shape[0]):
-                        ii.extend(np.where(self.label_dec_array == (label_index_group[j]))[0])
-                    ii = np.array(ii)
-                else:
-                    ii = np.where(self.label_dec_array==label_index[i])[0]
+                ii = np.where(self.label_dec_array == (label_index[i]))[0]
                 ii_size = ii.shape[0]
                 if (ii_size == 1):
                     flip_one = np.array((self.data_raw[np.asscalar(ii)]).tolist())
@@ -213,19 +190,11 @@ class celebA():
                     print("Please give me the right label...")
                     return 0
                 else:
-                    label_list = np.array(label.tolist())
-                    label_index = (self.vec2num(label_list))
+                    label_index = (self.vec2num(label)).tolist()
                     pic_list = torch.FloatTensor(batch_size,3,64,64)
-                    # label_list = torch.FloatTensor(batch_size,18)
+                    label_list = torch.FloatTensor(batch_size,18)
                     for i in range(batch_size):
-                        if (Neigbor):
-                            ii = []
-                            label_index_group = (self.get_neigbor(label_list[i]))
-                            for j in range(label_index_group.shape[0]):
-                                ii.extend(np.where(self.label_dec_array == (label_index_group[j]))[0])
-                            ii = np.array(ii)
-                        else:
-                            ii = np.where(self.label_dec_array == label_index[i])[0]
+                        ii = np.where(self.label_dec_array == (label_index[i]))[0]
                         ii_size = ii.shape[0]
                         if(ii_size==1):
                             # print(ii)
@@ -236,23 +205,29 @@ class celebA():
                             select_index = np.random.randint(0,ii_size)
                             pic_list[i,:,:,:] = self.data_raw[np.asscalar(ii[select_index])]
                     return [pic_list, label]
+        # print("to do ...")
 
-#
-# celebA = celebA()
-# mb_size = 100
-#
-# X, c = celebA.batch_next(mb_size, label = 1,shuffle=True)
-# out_dir = './test3/'
-# out_dir.replace(" ","_")
-# if not os.path.exists(out_dir):
-#     os.makedirs(out_dir)
-#     shutil.copyfile(sys.argv[0], out_dir + '/shuideguo.py')
-#
-#
-# owntool.save_color_picture_pixel(X.tolist(), out_dir+'./X.jpg', image_size=64, column=10, mb_size=100)
-#
-# X2, c2 = celebA.batch_next(mb_size, label= c, shuffle=False, Neigbor=False)
-# owntool.save_color_picture_pixel(X2.tolist(), out_dir+'./X2.jpg', image_size=64, column=10, mb_size=100)
-#
-# X3, c3 = celebA.batch_next(mb_size, label=c, shuffle=False, Negative = True, Neigbor=False)
-# owntool.save_color_picture_pixel(X3.tolist(), out_dir+'./X3.jpg', image_size=64, column=10, mb_size=100)
+mm = celebA()
+mb_size = 100
+timer = Timer()
+timer.start()
+X, c =mm.batch_next(mb_size, label=1, shuffle=True)
+timer.checkpoint('anchor')
+mm.batch_next(mb_size, label=c, shuffle=False)
+timer.checkpoint('positive')
+mm.batch_next(mb_size, label=c, shuffle=False, Negative=True)
+timer.checkpoint('negative')
+timer.summary()
+timer.reset()
+
+def timeit():
+    timer = Timer()
+    timer.start()
+    X, c =mm.batch_next(mb_size, label=1, shuffle=True)
+    timer.checkpoint('anchor')
+    mm.batch_next(mb_size, label=c, shuffle=False)
+    timer.checkpoint('positive')
+    mm.batch_next(mb_size, label=c, shuffle=False, Negative=True)
+    timer.checkpoint('negative')
+    timer.summary()
+    timer.reset()

@@ -1,3 +1,5 @@
+from tempfile import TemporaryFile
+
 import torch
 import torch.nn as nn
 import numpy as np
@@ -12,6 +14,13 @@ import mutil
 from datetime import datetime
 from tensorflow.examples.tutorials.mnist import input_data
 import data_convert
+import scipy
+import scipy.misc
+import numpy as np
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 import os
 import sys,shutil
@@ -67,7 +76,7 @@ enet.load_state_dict(encoder_model)
 
 add_in_feature = feature_size+ hidden_d # Add one dimension data for the input_feature data.
 G = model.G_Net_FM_3(ngpu,add_in_feature,main_gpu=main_gpu).cuda()
-g_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/mnist_pretrain_DG/G_80000.model")
+g_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/mnist_pretrain_G/G_80000.model")
 G.load_state_dict(g_model)
 
 in_channel = 1
@@ -76,12 +85,12 @@ E = model.Ev_Net_conv(ngpu,in_channel,main_gpu=main_gpu).cuda()
 # G.apply(weights_init)
 
 d_in_demension = 1
-D = model.D_Net_conv(ngpu,d_in_demension,main_gpu=main_gpu).cuda()
-d_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/mnist_pretrain_DG/D_80000.model")
-D.load_state_dict(d_model)
+# D = model.D_Net_conv(ngpu,d_in_demension,main_gpu=main_gpu).cuda()
+# d_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/new_f3_no_label_2017-05-10 13:45:32.768405/D_20000.model")
+# D.load_state_dict(d_model)
 
 G_solver = optim.Adam(G.parameters(),lr = 1e-4)
-D_solver = optim.Adam(D.parameters(), lr = 1e-4)
+# D_solver = optim.Adam(D.parameters(), lr = 1e-4)
 E_solver = optim.Adam(E.parameters(), lr=1e-4)
 
 half_label = Variable(torch.ones(batch_size)*0.5).cuda()
@@ -95,32 +104,14 @@ criterion_mse = nn.MSELoss()
 epoch = 1
 
 
-for epoch in range(10):
-    # D PART ./ data_old/ d_f3 / error
-    data, label = mm.batch_next(10, shuffle=False)
-    data = torch.from_numpy(data.astype('float32'))
-    data = data.repeat(batch_size // 10, 1, 1, 1)
-    D.zero_grad()
-    G.zero_grad()
-    data_old = Variable(data).cuda()
-    data_old.data.resize_(batch_size, 1, 28, 28)
-    _, _, _, f3 = enet(data_old.detach())
-    d_f3 = f3.cuda()
 
-    g_sampler = torch.randn([batch_size , hidden_d, 1, 1])
-    # g_sampler = g_sampler.repeat(10, 1, 1, 1)
-    g_sampler = Variable(g_sampler).cuda()
-    d_f3.data.resize_(batch_size, feature_size, 1, 1)
-    d_f3 = d_f3.detach()
-    d_f3_output = G(torch.cat([d_f3, g_sampler], 1)).detach()
-
-    zeroinput = Variable(torch.zeros([batch_size, hidden_d, 1, 1])).cuda()
-    g_zero_output = G(torch.cat([d_f3, zeroinput], 1))
-
-    g_sampler2 = Variable((torch.rand([batch_size, hidden_d, 1, 1]))).cuda()
-    g_f3_output1 = G(torch.cat([d_f3, g_sampler2], 1))
-
-    # owntool.save_picture(data, out_dir + "recon_epoch{}_data.png".format(epoch ),column=column)
-    owntool.save_picture(data_old, out_dir + "recon_epoch{}_data_old.png".format(epoch), column=column)
-    owntool.save_picture(g_zero_output, out_dir + "recon_epoch{}_zero.png".format(epoch), column=column)
-    owntool.save_picture(d_f3_output, out_dir + "recon_epoch{}_real.png".format(epoch), column=column)
+data, label = mm.batch_next(10000, shuffle=False)
+data = torch.from_numpy(data.astype('float32'))
+# data = data.repeat(batch_size // 10, 1, 1, 1)
+# D.zero_grad()
+G.zero_grad()
+data_old = Variable(data).cuda()
+data_old.data.resize_(10000, 1, 28, 28)
+_, _, _, f3 = enet(data_old.detach())
+# owntool.save_picture(np.array(f3.data.tolist()), out_dir + "feature_36.png", column=1)
+scipy.misc.imsave("./feature_36.png",np.array(f3.data.tolist()))

@@ -21,7 +21,7 @@ ngpu = 1
 if __name__ == '__main__':
     hidden_d = 128 # the dimension of the feature map in the first layer
 
-main_gpu = 6
+main_gpu = 7
 
 column = 10
 torch.cuda.set_device(main_gpu)
@@ -67,8 +67,8 @@ enet.load_state_dict(encoder_model)
 
 add_in_feature = feature_size+ hidden_d # Add one dimension data for the input_feature data.
 G = model.G_Net_FM_3(ngpu,add_in_feature,main_gpu=main_gpu).cuda()
-g_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/mnist_pretrain_DG/G_60000.model")
-G.load_state_dict(g_model)
+# g_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/mnist_pretrain_DG/G_60000.model")
+# G.load_state_dict(g_model)
 
 in_channel = 1
 E = model.Ev_Net_conv(ngpu,in_channel,main_gpu=main_gpu).cuda()
@@ -77,8 +77,8 @@ E = model.Ev_Net_conv(ngpu,in_channel,main_gpu=main_gpu).cuda()
 
 d_in_demension = 1
 D = model.D_Net_conv(ngpu,d_in_demension,main_gpu=main_gpu).cuda()
-d_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/mnist_pretrain_DG/D_60000.model")
-D.load_state_dict(d_model)
+# d_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/mnist_pretrain_DG/D_60000.model")
+# D.load_state_dict(d_model)
 
 G_solver = optim.Adam(G.parameters(),lr = 1e-4)
 D_solver = optim.Adam(D.parameters(), lr = 1e-4)
@@ -93,15 +93,13 @@ criterion_t = nn.TripletMarginLoss(p=1)
 criterion_mse = nn.MSELoss()
 
 for epoch in (range(1,num_epoches)):
-
-
 # D PART ./ data_old/ d_f3 / error
-    data, label = mm.batch_next(batch_size, shuffle=True)
-    D.zero_grad()
-    G.zero_grad()
-    data_old = Variable(torch.from_numpy(data)).cuda()
+    data, label = mm.batch_next(batch_size,label = [8],  shuffle=False)
+    D_solver.zero_grad()
+    G_solver.zero_grad()
+    data_old = Variable(torch.from_numpy(data.astype('float32'))).cuda()
     data_old.data.resize_(batch_size, 1, 28, 28)
-    _,_,f3,_ = enet(data_old.detach())
+    _,_,_,f3 = enet(data_old.detach())
     d_f3 = f3.cuda()
     g_sampler = Variable((torch.randn([batch_size,hidden_d,1,1]))).cuda()
     d_f3.data.resize_(batch_size,feature_size,1,1)
@@ -123,10 +121,10 @@ for epoch in (range(1,num_epoches)):
 # G Part / data_g / g_f3 / dg_error
     D.zero_grad()
     G.zero_grad()
-    data_g, label_g = mm.batch_next(batch_size, shuffle=True)
-    data_g = Variable(torch.from_numpy(data_g)).cuda()
+    data_g, label_g = mm.batch_next(batch_size,label = [8], shuffle=False)
+    data_g = Variable(torch.from_numpy(data_g.astype('float32'))).cuda()
     # data_g.data.resize_(batch_size, 1, 28, 28)
-    _,_,f3,_ = enet(data_g)
+    _,_,_,f3 = enet(data_g)
     g_f3 = f3.cuda()
     g_f3.data.resize_(batch_size,feature_size,1,1)
     g_f3 = g_f3.detach()
@@ -142,61 +140,61 @@ for epoch in (range(1,num_epoches)):
 # Evaluator: Triplet Net
     # E part
     # For E, triplet part
-    D.zero_grad()
-    G.zero_grad()
-    E.zero_grad()
+    D_solver.zero_grad()
+    G_solver.zero_grad()
+    # E_solver.zero_grad()
 
-    X, c = mm.batch_next(batch_size, shuffle=False)
-    X = Variable(torch.from_numpy(X.astype('floatxccc'))).cuda()
-    E_anch = E(X)
-
-    X2, c2 = mm.batch_next(batch_size, shuffle=False)
-    X2 = Variable(torch.from_numpy(X2.astype('float32'))).cuda()
-    E_real = E(X2)
-
-    new_label_base = np.array(range(10))
-    new_label = (new_label_base + (np.random.rand(10) * 9 + 1).astype('int'))%10
-    X3, c3 = mm.batch_next(batch_size, label=new_label, shuffle=False)
-    X3 = Variable(torch.from_numpy(X3.astype('float32'))).cuda()
-    E_fake = E(X3)
-
-    E_loss = criterion_t(E_anch, E_real, E_fake)
-    E_loss.backward()
-    E_solver.step()
-
-# Evaluator: G
-    D.zero_grad()
-    E.zero_grad()
-
-    # For E ( generated data )
-    _,_,f3,_ = enet(X)
-    e_f3 = f3.cuda()
-    e_f3.data.resize_(batch_size,feature_size,1,1)
-    e_f3 = e_f3.detach()
-    # e_f3 = F.sigmoid(e_f3)
-    g_sampler = Variable((torch.randn([batch_size,hidden_d,1,1]))).cuda()
-    G_sample = G(torch.cat([e_f3,g_sampler],1))
-    E_real = E(G_sample)
-    E_anch = E(X)
-    # genereted (another kind of data)
-    # data_ol == data_other_label
-    new_label_base = np.array(range(10))
-    new_label = (new_label_base + (np.random.rand(10) * 9 + 1).astype('int'))%10
-    data_ol, label_ol = mm.batch_next(batch_size, label = new_label, shuffle=False)
-    data_ol = Variable(torch.from_numpy(data_ol.astype('float32'))).cuda()
-    # data_ol.data.resize_(batch_size, 1, 28, 28)
-    _,_,f3_fake,_ = enet(data_ol)
-    g_f3_fake = f3_fake.cuda()
-    # g_f3_fake = F.sigmoid(g_f3_fake)
-    g_f3_fake.data.resize_(batch_size,feature_size,1,1)
-    g_f3_fake = g_f3_fake.detach()
-    g_sampler = Variable(torch.randn([batch_size,hidden_d,1,1])).cuda()
-    G_sample_fake = G(torch.cat([g_f3_fake,g_sampler],1))
-    E_fake = E(G_sample_fake)
-    # E_anch = E(X)
-    E_loss = criterion_t(E_anch, E_real, E_fake)
-    E_loss.backward()
-    G_solver.step()
+#     X, c = mm.batch_next(batch_size, shuffle=False)
+#     X = Variable(torch.from_numpy(X.astype('floatxccc'))).cuda()
+#     E_anch = E(X)
+#
+#     X2, c2 = mm.batch_next(batch_size, shuffle=False)
+#     X2 = Variable(torch.from_numpy(X2.astype('float32'))).cuda()
+#     E_real = E(X2)
+#
+#     new_label_base = np.array(range(10))
+#     new_label = (new_label_base + (np.random.rand(10) * 9 + 1).astype('int'))%10
+#     X3, c3 = mm.batch_next(batch_size, label=new_label, shuffle=False)
+#     X3 = Variable(torch.from_numpy(X3.astype('float32'))).cuda()
+#     E_fake = E(X3)
+#
+#     E_loss = criterion_t(E_anch, E_real, E_fake)
+#     E_loss.backward()
+#     E_solver.step()
+#
+# # Evaluator: G
+#     D.zero_grad()
+#     E.zero_grad()
+#
+#     # For E ( generated data )
+#     _,_,_,f3 = enet(X)
+#     e_f3 = f3.cuda()
+#     e_f3.data.resize_(batch_size,feature_size,1,1)
+#     e_f3 = e_f3.detach()
+#     # e_f3 = F.sigmoid(e_f3)
+#     g_sampler = Variable((torch.randn([batch_size,hidden_d,1,1]))).cuda()
+#     G_sample = G(torch.cat([e_f3,g_sampler],1))
+#     E_real = E(G_sample)
+#     E_anch = E(X)
+#     # genereted (another kind of data)
+#     # data_ol == data_other_label
+#     new_label_base = np.array(range(10))
+#     new_label = (new_label_base + (np.random.rand(10) * 9 + 1).astype('int'))%10
+#     data_ol, label_ol = mm.batch_next(batch_size, label = new_label, shuffle=False)
+#     data_ol = Variable(torch.from_numpy(data_ol.astype('float32'))).cuda()
+#     # data_ol.data.resize_(batch_size, 1, 28, 28)
+#     _,_,_,f3_fake = enet(data_ol)
+#     g_f3_fake = f3_fake.cuda()
+#     # g_f3_fake = F.sigmoid(g_f3_fake)
+#     g_f3_fake.data.resize_(batch_size,feature_size,1,1)
+#     g_f3_fake = g_f3_fake.detach()
+#     g_sampler = Variable(torch.randn([batch_size,hidden_d,1,1])).cuda()
+#     G_sample_fake = G(torch.cat([g_f3_fake,g_sampler],1))
+#     E_fake = E(G_sample_fake)
+#     # E_anch = E(X)
+#     E_loss = criterion_t(E_anch, E_real, E_fake)
+#     E_loss.backward()
+#     G_solver.step()
 
     # Housekeeping - reset gradient
     # print("heelo")
@@ -215,22 +213,22 @@ for epoch in (range(1,num_epoches)):
         owntool.save_picture(g_zero_output, out_dir + "recon_epoch{}_zero.png".format(epoch),column=column)
         owntool.save_picture(g_f3_output1, out_dir + "recon_epoch{}_real.png".format(epoch),column=column)
 
-        print("%s: D: %s/%s G: %s (Real: %s, Fake: %s) E: %s"% (epoch,
+        print("%s: D: %s/%s G: %s (Real: %s, Fake: %s) "% (epoch,
                                                        owntool.extract(d_real_error)[0],
                                                          owntool.extract(d_false_error)[0],
                                                          owntool.extract(dg_error)[0],
                                                          owntool.stats(owntool.extract(d_real_decision)),
                                                          owntool.stats(owntool.extract(d_false_decision)),
-                                                         owntool.stats(owntool.extract(E_loss)[0])
+                                                         # owntool.stats(owntool.extract(E_loss)[0])
                                                          )
               )
     if(epoch%(check_points*10)==0):
         np.set_printoptions(precision=2,suppress=True)
-        print("real")
-        print( np.array(E_real.data.tolist()))
-        print("anch")
-        print( np.array(E_anch.data.tolist()))
-        print("fake")
-        print( np.array(E_fake.data.tolist()))
+        # print("real")
+        # print( np.array(E_real.data.tolist()))
+        # print("anch")
+        # print( np.array(E_anch.data.tolist()))
+        # print("fake")
+        # print( np.array(E_fake.data.tolist()))
         torch.save(G.state_dict(), '{}/G_{}.model'.format(out_dir, str(epoch)))
         torch.save(D.state_dict(), '{}/D_{}.model'.format(out_dir, str(epoch)))

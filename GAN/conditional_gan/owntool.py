@@ -52,11 +52,11 @@ def save_color_pictrue(pic, output_dir, column = 10, image_size = 32):
     plt.close(fig)
 
 # we have 100 classes in total : )
-def save_color_picture_pixel(pic, output_dir, column = 10, image_size = 32):
-    reconx = np.transpose(np.reshape(pic, (100, 3, 32, 32)), (0, 2, 3, 1))
-    reconx = [reconx[i] for i in range(100)]
+def save_color_picture_pixel(pic, output_dir, column = 10, image_size = 32,mb_size = 100):
+    reconx = np.transpose(np.reshape(pic, (mb_size, 3, image_size, image_size)), (0, 2, 3, 1))
+    reconx = [reconx[i] for i in range(mb_size)]
     rows = []
-    for i in range(10):
-        rows.append(np.concatenate(reconx[i::10], 1))
+    for i in range(column):
+        rows.append(np.concatenate(reconx[i::column], 1))
     reconx = np.concatenate(rows, 0)
     scipy.misc.imsave(output_dir, reconx)
