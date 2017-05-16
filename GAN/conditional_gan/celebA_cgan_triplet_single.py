@@ -23,7 +23,7 @@ from be_gan_models import *
 import torchvision.utils as vutils
 from collections import deque
 
-gpu = 5
+gpu = 6
 ngpu = 1
 gpu_ids = [0]
 
@@ -55,8 +55,8 @@ d_num = 3
 # D = model.D_Net_conv_64(ngpu,main_gpu=gpu,inchannel=3).cuda()
 #G_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 15:52:13.303939_0/G_10000.model")
 #D_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 15:52:13.303939_0/D_10000.model")
-D_model = torch.load("/home/bike/data/beganD_60000.model")
-G_model = torch.load("/home/bike/data/beganG_60000.model")
+#D_model = torch.load("/home/bike/data/beganD_60000.model")
+#G_model = torch.load("/home/bike/data/beganG_60000.model")
 
 
 D_hidden_layer = 128
@@ -65,15 +65,16 @@ conv_hidden_num = 128
 
 repeat_num = int(np.log2(X_dim)) - 2
 
-D = DiscriminatorCNN(input_channel=3, z_num= D_hidden_layer, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids)
-G = GeneratorCNN(label_dim+Z_dim, D.conv2_input_dim, output_num=3, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids)
+#D = DiscriminatorCNN(input_channel=3, z_num= D_hidden_layer, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids)
+#G = GeneratorCNN(label_dim+Z_dim, D.conv2_input_dim, output_num=3, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids)
 E = model.E_Net_conv_64(ngpu,main_gpu= gpu, inchannel=3, outchannel=10).cuda()
+print(E)
 
-G.load_state_dict(G_model)
-D.load_state_dict(D_model)
+#G.load_state_dict(G_model)
+#D.load_state_dict(D_model)
 
-G.cuda()
-D.cuda()
+#G.cuda()
+#D.cuda()
 E.cuda()
 
 #timer = Timer()
@@ -105,8 +106,8 @@ d_num = 3
 beta1 = 0.5
 beta2 = 0.999
 lr = 1e-5
-G_solver = optim.Adam(G.parameters(), lr=1e-5,betas=(beta1, beta2))
-D_solver = optim.Adam(D.parameters(), lr=1e-5,betas=(beta1, beta2))
+#G_solver = optim.Adam(G.parameters(), lr=1e-5,betas=(beta1, beta2))
+#D_solver = optim.Adam(D.parameters(), lr=1e-5,betas=(beta1, beta2))
 E_solver = optim.Adam(E.parameters(), lr=1e-5,betas=(beta1, beta2))
 
 ones_label = Variable(torch.ones(mb_size)).cuda()

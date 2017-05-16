@@ -108,17 +108,17 @@ class E_Net_conv_64(nn.Module):
         self.outchannel = outchannel
 
         channel_1 = [inchannel, self.ngf,self.ngf*2,self.ngf*2, self.ngf*2]
-        channel_2 = [self.ngf*4, self.ngf*4, self.ngf*5, self.ngf*5, self.ngf*6]
-        channel_3 = [self.ngf*5, self.ngf*8, self.ngf*8, self.ngf*8]
+        channel_2 = [self.ngf*2, self.ngf*4, self.ngf*5, self.ngf*5, self.ngf*6]
+        channel_3 = [self.ngf*6, self.ngf*8, self.ngf*8, self.ngf*8]
         # channel_4 = [self.ngf*8, self.ngf*10]
         conv_layers = []
-        conv_layers.append(self.get_conv_groups(channels=channel_1,repeat_num=4))
+        conv_layers.extend(self.get_conv_groups(channels=channel_1,repeat_num=4))
         conv_layers.append(nn.MaxPool2d(2))
-        conv_layers.append(self.get_conv_groups(channels=channel_2,repeat_num=4))
+        conv_layers.extend(self.get_conv_groups(channels=channel_2,repeat_num=4))
         conv_layers.append(nn.MaxPool2d(2))
-        conv_layers.append(self.get_conv_groups(channels=channel_3,repeat_num=3))
+        conv_layers.extend(self.get_conv_groups(channels=channel_3,repeat_num=3))
         conv_layers.append(nn.MaxPool2d(2))
-        conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*8,4,1)) # self.ngf * 10 * 2 *2
+        conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*8,4)) # self.ngf * 10 * 2 *2
         conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*10,2,0))
 
         self.conv = torch.nn.Sequential(*conv_layers)
@@ -149,7 +149,7 @@ class E_Net_conv_64(nn.Module):
         layers  = []
         assert np.size(channels)-1==repeat_num
         for i in range(repeat_num):
-            layers.append(nn.Conv2d(channels[i], channels[i+1],3,1))
+            layers.append(nn.Conv2d(channels[i], channels[i+1],4,1,1))
             layers.append(nn.BatchNorm2d(channels[i+1]))
             layers.append(nn.ELU(0.2))
         return layers
@@ -160,8 +160,8 @@ class E_Net_conv_64(nn.Module):
             output = output.view(-1, self.ngf*10)
             output = nn.parallel.data_parallel(self.pipeline2, output, range(self.main_gpu,self.main_gpu+self.ngpu))
         else:
-            output = self.pipeline(x)
-            output = output.view(-1, self.ngf*8)
+            output = self.conv(x)
+            output = output.view(-1, self.ngf*10)
             output = self.pipeline2(output)
         return output
 
