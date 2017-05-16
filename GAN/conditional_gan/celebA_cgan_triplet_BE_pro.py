@@ -23,9 +23,9 @@ from be_gan_models import *
 import torchvision.utils as vutils
 from collections import deque
 
-gpu = 2
+gpu = 4
 ngpu = 1
-gpu_ids = [2]
+gpu_ids = [0]
 
 torch.cuda.set_device(gpu)
 # mnist = input_data.read_data_sets('../../MNIST_data', one_hot=True)
@@ -43,18 +43,21 @@ out_dir.replace(" ","_")
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
-    shutil.copyfile(sys.argv[0], out_dir + '/explore_triplet_on_ebgan.py')
+    shutil.copyfile(sys.argv[0], out_dir + '/pretrain_uncondition_triplet_large_lr.py')
 
 sys.stdout = mutil.Logger(out_dir)
 in_channel=4
 d_num = 3
 
 # G = model.G_Net_conv_64(ngpu,main_gpu = gpu, in_channel = Z_dim+label_dim,out_channel=3).cuda()
-G_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 17:33:50.051268_0/G_42500.model")
-D_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 17:33:50.051268_0/D_42500.model")
+#G_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 17:33:50.051268_0/G_42500.model")
+#D_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 17:33:50.051268_0/D_42500.model")
 # D = model.D_Net_conv_64(ngpu,main_gpu=gpu,inchannel=3).cuda()
 #G_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 15:52:13.303939_0/G_10000.model")
 #D_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 15:52:13.303939_0/D_10000.model")
+D_model = torch.load("/home/bike/data/beganD_60000.model")
+G_model = torch.load("/home/bike/data/beganG_60000.model")
+E_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/pretrain_triplet_2017-05-17 01:53:58.468785_0/E_95000.model")
 
 D_hidden_layer = 128
 conv_hidden_num = 128
@@ -68,6 +71,7 @@ E = model.E_Net_conv_64(ngpu,main_gpu= gpu, inchannel=3, outchannel=10).cuda()
 
 G.load_state_dict(G_model)
 D.load_state_dict(D_model)
+E.load_state_dict(E_model)
 
 G.cuda()
 D.cuda()
@@ -102,9 +106,9 @@ d_num = 3
 beta1 = 0.5
 beta2 = 0.999
 lr = 1e-5
-G_solver = optim.Adam(G.parameters(), lr=1e-5,betas=(beta1, beta2))
-D_solver = optim.Adam(D.parameters(), lr=1e-5,betas=(beta1, beta2))
-E_solver = optim.Adam(E.parameters(), lr=1e-5,betas=(beta1, beta2))
+G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=(beta1, beta2))
+D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=(beta1, beta2))
+E_solver = optim.Adam(E.parameters(), lr=1e-4,betas=(beta1, beta2))
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
@@ -238,7 +242,6 @@ for it in range(100000):
         E_loss_t = criterion_t(E_anch, E_real, E_fake)
         E_loss_t.backward()
         E_solver.step()
-
         # Housekeeping - reset gradient
         # D.zero_grad()
         G_solver.zero_grad()
@@ -265,7 +268,7 @@ for it in range(100000):
         E_loss_g.backward()
         lr_tmp = lr
         for param_group in G_solver.param_groups:
-            param_group['lr'] = 1e-6
+            param_group['lr'] = 3e-5
 
         G_solver.step()
 
@@ -277,7 +280,7 @@ for it in range(100000):
 
     # Print and plot every now and then
     if it % 500 == 0:
-        print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {},E_loss: {}, measure:{}, k_t : {}, lr = {}'.format(it, d_loss_real.data.tolist(),
+        print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {},E_loss: {}/{}, measure:{}, k_t : {}, lr = {}'.format(it, d_loss_real.data.tolist(),
                                                                         d_loss_fake.data.tolist(), g_loss.data.tolist(),E_loss_t.data.tolist(), E_loss_g.data.tolist(),
                                                                                                   measure,k_t,lr
                                                                                ))

@@ -108,20 +108,34 @@ class E_Net_conv_64(nn.Module):
         self.outchannel = outchannel
 
         channel_1 = [inchannel, self.ngf,self.ngf*2,self.ngf*2, self.ngf*2]
-        channel_2 = [self.ngf*4, self.ngf*4, self.ngf*5, self.ngf*5, self.ngf*6]
+        channel_2 = [self.ngf*2, self.ngf*4, self.ngf*5, self.ngf*5, self.ngf*5]
         channel_3 = [self.ngf*5, self.ngf*8, self.ngf*8, self.ngf*8]
         # channel_4 = [self.ngf*8, self.ngf*10]
-        conv_layers = []
-        conv_layers.append(self.get_conv_groups(channels=channel_1,repeat_num=4))
-        conv_layers.append(nn.MaxPool2d(2))
-        conv_layers.append(self.get_conv_groups(channels=channel_2,repeat_num=4))
-        conv_layers.append(nn.MaxPool2d(2))
-        conv_layers.append(self.get_conv_groups(channels=channel_3,repeat_num=3))
-        conv_layers.append(nn.MaxPool2d(2))
-        conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*8,4,1)) # self.ngf * 10 * 2 *2
-        conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*10,2,0))
+        self.conv_layers = []
+        for i in range(4):
+            self.conv_layers.append(nn.Conv2d(channel_1[i], channel_1[i + 1], 4, 1, 1))
+            self.conv_layers.append(nn.BatchNorm2d(channel_1[i + 1]))
+            self.conv_layers.append(nn.ELU(0.2))
+        self.conv_layers.append(nn.MaxPool2d(2))
+        for i in range(4):
+            self.conv_layers.append(nn.Conv2d(channel_2[i], channel_2[i + 1], 4, 1, 1))
+            self.conv_layers.append(nn.BatchNorm2d(channel_2[i + 1]))
+            self.conv_layers.append(nn.ELU(0.2))
+        #
+        self.conv_layers.append(nn.MaxPool2d(2))
+        for i in range(3):
+            self.conv_layers.append(nn.Conv2d(channel_3[i], channel_3[i + 1], 4, 1, 1))
+            self.conv_layers.append(nn.BatchNorm2d(channel_3[i + 1]))
+            self.conv_layers.append(nn.ELU(0.2))
 
-        self.conv = torch.nn.Sequential(*conv_layers)
+        self.conv_layers.append(nn.MaxPool2d(2))
+        self.conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*8,4,1)) # self.ngf * 10 * 2 *2
+        self.conv_layers.append(nn.BatchNorm2d(self.ngf*8))
+        self.conv_layers.append(nn.ELU(0.2))
+        self.conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*10,2,1))
+
+
+        self.conv = torch.nn.Sequential(*self.conv_layers)
         self.pipeline2  = nn.Sequential(
             nn.Linear(self.ngf*10, self.ngf),
             nn.ELU(),
@@ -145,14 +159,14 @@ class E_Net_conv_64(nn.Module):
         #     nn.ELU()
         #     # nn.MaxPool2d(2)
         # )
-    def get_conv_groups(self, channels, repeat_num):
-        layers  = []
-        assert np.size(channels)-1==repeat_num
-        for i in range(repeat_num):
-            layers.append(nn.Conv2d(channels[i], channels[i+1],))
-            layers.append(nn.BatchNorm2d(channels[i+1]))
-            layers.append(nn.ELU(0.2))
-        return layers
+    # def get_conv_groups(self, channels, repeat_num):
+    #     layers  = []
+    #     assert np.size(channels)-1==repeat_num
+    #     for i in range(repeat_num):
+    #         layers.append(nn.Conv2d(channels[i], channels[i+1],4,1,1))
+    #         layers.append(nn.BatchNorm2d(channels[i+1]))
+    #         layers.append(nn.ELU(0.2))
+    #     return layers
 
     def forward(self, x):
         if isinstance(x.data, torch.cuda.FloatTensor) and self.ngpu > 1:
@@ -160,8 +174,8 @@ class E_Net_conv_64(nn.Module):
             output = output.view(-1, self.ngf*10)
             output = nn.parallel.data_parallel(self.pipeline2, output, range(self.main_gpu,self.main_gpu+self.ngpu))
         else:
-            output = self.pipeline(x)
-            output = output.view(-1, self.ngf*8)
+            output = self.conv(x)
+            output = output.view(-1, self.ngf*10)
             output = self.pipeline2(output)
         return output
 
