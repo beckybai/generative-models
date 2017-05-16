@@ -149,7 +149,7 @@ class E_Net_conv_64(nn.Module):
         layers  = []
         assert np.size(channels)-1==repeat_num
         for i in range(repeat_num):
-            layers.append(nn.Conv2d(channels[i], channels[i+1],3,1))
+            layers.append(nn.Conv2d(channels[i], channels[i+1],))
             layers.append(nn.BatchNorm2d(channels[i+1]))
             layers.append(nn.ELU(0.2))
         return layers
