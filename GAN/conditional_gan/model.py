@@ -106,34 +106,58 @@ class E_Net_conv_64(nn.Module):
         self.main_gpu = main_gpu
         self.ngf = 64
         self.outchannel = outchannel
-        self.pipeline = nn.Sequential(
-            nn.Conv2d(inchannel, self.ngf, 5,1),  # 60
-            nn.BatchNorm2d(self.ngf),
-            nn.ELU(),
-            nn.MaxPool2d(2),#30
-            nn.Conv2d(self.ngf, self.ngf*2, 5,1),  # 26
-            nn.BatchNorm2d(self.ngf*2),
-            nn.ELU(),
-            nn.MaxPool2d(2),  # 13
-            nn.Conv2d(self.ngf*2, self.ngf*4, 4,1),# 10
-            nn.MaxPool2d(2), # 5
-            nn.ELU(),
-            nn.Conv2d(self.ngf*4, self.ngf*8, 5,1), #1
-            nn.ELU()
-            # nn.MaxPool2d(2)
-        )
 
+        channel_1 = [inchannel, self.ngf,self.ngf*2,self.ngf*2, self.ngf*2]
+        channel_2 = [self.ngf*4, self.ngf*4, self.ngf*5, self.ngf*5, self.ngf*6]
+        channel_3 = [self.ngf*5, self.ngf*8, self.ngf*8, self.ngf*8]
+        # channel_4 = [self.ngf*8, self.ngf*10]
+        conv_layers = []
+        conv_layers.append(self.get_conv_groups(channels=channel_1,repeat_num=4))
+        conv_layers.append(nn.MaxPool2d(2))
+        conv_layers.append(self.get_conv_groups(channels=channel_2,repeat_num=4))
+        conv_layers.append(nn.MaxPool2d(2))
+        conv_layers.append(self.get_conv_groups(channels=channel_3,repeat_num=3))
+        conv_layers.append(nn.MaxPool2d(2))
+        conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*8,4,1)) # self.ngf * 10 * 2 *2
+        conv_layers.append(nn.Conv2d(self.ngf*8, self.ngf*10,2,0))
+
+        self.conv = torch.nn.Sequential(*conv_layers)
         self.pipeline2  = nn.Sequential(
-            nn.Linear(self.ngf*8, self.ngf),
+            nn.Linear(self.ngf*10, self.ngf),
             nn.ELU(),
             nn.Linear(self.ngf, self.outchannel),
             nn.Sigmoid()
         )
+        #
+        # self.pipeline = nn.Sequential(
+        #     nn.Conv2d(inchannel, self.ngf, 5,1),  # 60
+        #     nn.BatchNorm2d(self.ngf),
+        #     nn.ELU(),
+        #     nn.MaxPool2d(2),#30
+        #     nn.Conv2d(self.ngf, self.ngf*2, 5,1),  # 26
+        #     nn.BatchNorm2d(self.ngf*2),
+        #     nn.ELU(),
+        #     nn.MaxPool2d(2),  # 13
+        #     nn.Conv2d(self.ngf*2, self.ngf*4, 4,1),# 10
+        #     nn.MaxPool2d(2), # 5
+        #     nn.ELU(),
+        #     nn.Conv2d(self.ngf*4, self.ngf*8, 5,1), #1
+        #     nn.ELU()
+        #     # nn.MaxPool2d(2)
+        # )
+    def get_conv_groups(self, channels, repeat_num):
+        layers  = []
+        assert np.size(channels)-1==repeat_num
+        for i in range(repeat_num):
+            layers.append(nn.Conv2d(channels[i], channels[i+1],3,1))
+            layers.append(nn.BatchNorm2d(channels[i+1]))
+            layers.append(nn.ELU(0.2))
+        return layers
 
     def forward(self, x):
         if isinstance(x.data, torch.cuda.FloatTensor) and self.ngpu > 1:
-            output = nn.parallel.data_parallel(self.pipeline, x, range(self.main_gpu, self.main_gpu+self.ngpu))
-            output = output.view(-1, self.ngf*8)
+            output = nn.parallel.data_parallel(self.conv, x, range(self.main_gpu, self.main_gpu+self.ngpu))
+            output = output.view(-1, self.ngf*10)
             output = nn.parallel.data_parallel(self.pipeline2, output, range(self.main_gpu,self.main_gpu+self.ngpu))
         else:
             output = self.pipeline(x)

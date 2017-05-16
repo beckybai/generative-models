@@ -18,14 +18,14 @@ import mutil
 import model
 import data_convert
 import owntool
-#from pytimer import Timer
+from pytimer import Timer
 from be_gan_models import *
 import torchvision.utils as vutils
 from collections import deque
 
-gpu = 3
+gpu = 0
 ngpu = 1
-gpu_ids = [3]
+gpu_ids = [0]
 
 torch.cuda.set_device(gpu)
 # mnist = input_data.read_data_sets('../../MNIST_data', one_hot=True)
@@ -38,7 +38,7 @@ y_dim = 1
 cnt = 0
 
 num = '0'
-out_dir = './cifar100_result/basic_{}_{}/'.format(datetime.now(),num)
+out_dir = './cifar100_result/regression_BE_{}_{}/'.format(datetime.now(),num)
 out_dir.replace(" ","_")
 
 if not os.path.exists(out_dir):
@@ -50,8 +50,8 @@ in_channel=4
 d_num = 3
 
 # G = model.G_Net_conv_64(ngpu,main_gpu = gpu, in_channel = Z_dim+label_dim,out_channel=3).cuda()
-G_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 00:21:07.524687_0/G_35000.model")
-D_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 00:21:07.524687_0/D_35000.model")
+G_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 16:34:10.009671_0/G_40000.model")
+D_model = torch.load("/home/bike/2027/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 16:34:10.009671_0/D_40000.model")
 # D = model.D_Net_conv_64(ngpu,main_gpu=gpu,inchannel=3).cuda()
 D_hidden_layer = 128
 conv_hidden_num = 128
@@ -61,8 +61,8 @@ repeat_num = int(np.log2(X_dim)) - 2
 
 D = DiscriminatorCNN_Part1(input_channel=3, z_num= D_hidden_layer, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids)
 G = GeneratorCNN(label_dim+Z_dim, D.conv2_input_dim, output_num=3, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids)
-D_G = DiscriminatorCNN_GAN(input_channel=3, z_num= D_hidden_layer, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids )
-D_L = DiscriminatorCNN_Label(input_channel=3, z_num= D_hidden_layer, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids)
+D_G = DiscriminatorCNN_GAN(input_channel=3, conv2_input_dim=D.conv2_input_dim, repeat_num=repeat_num, hidden_num=conv_hidden_num, num_gpu=gpu_ids )
+D_L = DiscriminatorCNN_Label(input_channel=3, conv2_input_dim=D.conv2_input_dim, repeat_num=1, hidden_num=conv_hidden_num, num_gpu=gpu_ids, output_dim = label_dim)
 # E = model.E_Net_conv_64(ngpu,main_gpu= gpu, inchannel=3, outchannel=10).cuda()
 
 G.load_state_dict(G_model)
@@ -70,10 +70,12 @@ D.load_state_dict(D_model)
 
 G.cuda()
 D.cuda()
+D_G.cuda()
+D_L.cuda()
 # E.cuda()
 
-#timer = Timer()
-#timer.start()
+timer = Timer()
+timer.start()
 
 
 """Weight Initialization"""
@@ -101,8 +103,10 @@ d_num = 3
 beta1 = 0.5
 beta2 = 0.999
 lr = 1e-4
-G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=(beta1, beta2))
-D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=(beta1, beta2))
+G_solver = optim.Adam(G.parameters(), lr=1e-4, betas=(beta1, beta2))
+D_solver = optim.Adam(D.parameters(), lr=1e-4, betas=(beta1, beta2))
+DG_solver = optim.Adam(D_G.parameters(), lr=1e-4, betas=(beta1, beta2))
+DL_solver = optim.Adam(D_L.parameters(), lr=1e-4, betas=(beta1, beta2))
 # E_solver = optim.Adam(E.parameters(), lr=1e-5,betas=(beta1, beta2))
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
@@ -161,46 +165,59 @@ X, c_fixed = celebA.batch_next(mb_size,0)
 z_fixed = Variable(torch.randn(mb_size, Z_dim), volatile=True).cuda()
 c_fixed = Variable(c_fixed, volatile=True).cuda()
 zc_fixed = torch.cat([z_fixed, c_fixed.float()],1)
-
+criterion_sm = nn.SoftMarginLoss()
 
 for it in range(100000):
 
-   # timer.checkpoint('start D')
+    timer.checkpoint('start D')
     # Sample data
     # ============ Train D ============#
     D_solver.zero_grad()
+    DG_solver.zero_grad()
+    DL_solver.zero_grad()
     z = Variable(torch.randn(mb_size, Z_dim)).cuda()
     X, c = celebA.batch_next(mb_size,0)
     X = Variable(X).cuda()
     AE_x = D_G(D(X))
     d_loss_real = torch.mean(torch.abs(AE_x - X))
     # z = Variable(torch.FloatTensor(mb_size, Z_dim))
-
     c_d = Variable(model.set_label_celebA(c.float(),mb_size)).cuda()
-    c = Variable(c*0).cuda()
+    c = Variable(c).cuda()
+    c = c.float()
+    C_x = D_L(D(X).detach()) # the condition information will not influence the encoder
+    d_loss_condition = criterion_sm(C_x,c)
 
     # Dicriminator forward-loss-backward-update
-    fake_image = G(torch.cat([z,c.float()],1))
+    fake_image = G(torch.cat([z,c],1))
     AE_fake = D_G(D(fake_image.detach()))
     d_loss_fake = torch.mean(torch.abs(AE_fake - fake_image.detach()))
 
     d_loss = d_loss_real - k_t * d_loss_fake
     d_loss.backward()
+    d_loss_condition.backward()
     D_solver.step()
+    DG_solver.step()
+    DL_solver.step()
 
     # ============ Train G ============#
     # zero the grad buffer
     G_solver.zero_grad()
-   # timer.checkpoint('start G')
+    DL_solver.zero_grad()
+    timer.checkpoint('start G')
     # Generator forward-loss-backward-update
     z = Variable(torch.randn(mb_size, Z_dim)).cuda()
-    x_g = torch.cat([z,c.float()],1)
+    x_g = torch.cat([z,c],1)
     fake_image = G(x_g)
-    AE_fake = D(fake_image)
-    g_loss = torch.mean(torch.abs(AE_fake - fake_image))
 
-    g_loss.backward()
+    AE_fake = D_G(D(fake_image))
+    C_x = D_L(D(fake_image))
+    g_loss = torch.mean(torch.abs(AE_fake - fake_image))
+    d_loss_condition_g = torch.mean(torch.abs(C_x-c))
+
+    d_loss_condition_g.backward(retain_variables=True)
+    g_loss.backward(retain_variables=False)
     G_solver.step()
+    DL_solver.step()
 
     g_d_balance = (gamma * d_loss_real - d_loss_fake).data[0]
     k_t += lambda_k * g_d_balance
@@ -219,13 +236,13 @@ for it in range(100000):
                 param_group['lr'] = param_group['lr'] * 0.5
         prev_measure = cur_measure
 
-        #timer.checkpoint('End EG')
-
+    # ============ Train Condition ============#
     # Print and plot every now and then
     if it % 500 == 0:
-        print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {},measure:{}, k_t : {}, lr = {}'.format(it, d_loss_real.data.tolist(),
-                                                                        d_loss_fake.data.tolist(), g_loss.data.tolist(),
-                                                                                                  measure,k_t,lr
+        print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {},C_loss: {}/{}, measure:{}, k_t : {}, lr = {}'.format(it, d_loss_real.data.tolist(),
+                                                                d_loss_fake.data.tolist(), g_loss.data.tolist(),
+                                                                d_loss_condition.data.tolist(),d_loss_condition_g.data.tolist(),
+                                                                measure,k_t,lr
                                                                                ))
         x_fake = generate(zc_fixed, out_dir, idx=it) # get picture G
         autoencode(x_fixed, out_dir, idx=it, x_fake=x_fake) # get the reconstructed picture D
@@ -238,13 +255,14 @@ for it in range(100000):
         output_path_real = out_dir +  "{}_standard.png".format(it)
         owntool.save_color_picture_pixel(samples,output_path,image_size=64,column=4,mb_size = mb_size)
         owntool.save_color_picture_pixel(X.data.tolist(),output_path_real,image_size = 64,column=4,mb_size = mb_size)
-       # timer.summary()
-        #timer.reset()
+        timer.summary()
+        timer.reset()
 
-    if it % 10000==0:
+    if it % 2500==0:
         for param_group in D_solver.param_groups:
             param_group['lr'] = param_group['lr']*0.9
         torch.save(G.state_dict(),'{}/G_{}.model'.format(out_dir,str(it)))
         torch.save(D.state_dict(),'{}/D_{}.model'.format(out_dir,str(it)))
-        # torch.save(E.state_dict(),'{}/E_{}.model'.format(out_dir,str(it)))
+        torch.save(D_G.state_dict(),'{}/DG_{}.model'.format(out_dir,str(it)))
+        torch.save(D_L.state_dict(),'{}/DL_{}.model'.format(out_dir,str(it)))
 
