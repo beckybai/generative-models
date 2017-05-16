@@ -219,16 +219,17 @@ class DiscriminatorCNN_GAN(nn.Module):
             return self.conv2(fc2_out)
 
 class DiscriminatorCNN_Label(nn.Module):
-    def __init__(self, input_channel, conv2_input_dim, repeat_num, hidden_num, num_gpu):
+    def __init__(self, input_channel, conv2_input_dim, repeat_num, hidden_num, num_gpu, output_dim):
         super(DiscriminatorCNN_Label, self).__init__()
+        self.output_dim = output_dim
         layers = []
         # self.conv2_input_dim = conv2_input_dim
-        input_dim = torch.prod(conv2_input_dim)
+        input_dim = np.prod(conv2_input_dim)
         self.num_gpu = num_gpu
         for idx in range(repeat_num):
             layers.append(nn.Linear(input_dim, hidden_num*2))
             layers.append(nn.ELU(True))
-            layers.append(nn.Linear(hidden_num*2, hidden_num))
+            layers.append(nn.Linear(hidden_num*2, self.output_dim ))
             layers.append(nn.Sigmoid())        # layers.append(nn.Tanh())
 
         self.fc1 = torch.nn.Sequential(*layers)
