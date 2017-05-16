@@ -23,9 +23,9 @@ from be_gan_models import *
 import torchvision.utils as vutils
 from collections import deque
 
-gpu = 2
+gpu = 5
 ngpu = 1
-gpu_ids = [2]
+gpu_ids = [0]
 
 torch.cuda.set_device(gpu)
 # mnist = input_data.read_data_sets('../../MNIST_data', one_hot=True)
@@ -38,23 +38,26 @@ y_dim = 1
 cnt = 0
 
 num = '0'
-out_dir = './cifar100_result/basic_{}_{}/'.format(datetime.now(),num)
+out_dir = './cifar100_result/pretrain_triplet_{}_{}/'.format(datetime.now(),num)
 out_dir.replace(" ","_")
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
-    shutil.copyfile(sys.argv[0], out_dir + '/explore_triplet_on_ebgan.py')
+    shutil.copyfile(sys.argv[0], out_dir + '/pretrain_uncondition_triplet_large_lr.py')
 
 sys.stdout = mutil.Logger(out_dir)
 in_channel=4
 d_num = 3
 
 # G = model.G_Net_conv_64(ngpu,main_gpu = gpu, in_channel = Z_dim+label_dim,out_channel=3).cuda()
-G_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 17:33:50.051268_0/G_42500.model")
-D_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 17:33:50.051268_0/D_42500.model")
+#G_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 17:33:50.051268_0/G_42500.model")
+#D_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 17:33:50.051268_0/D_42500.model")
 # D = model.D_Net_conv_64(ngpu,main_gpu=gpu,inchannel=3).cuda()
 #G_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 15:52:13.303939_0/G_10000.model")
 #D_model = torch.load("/home/bike/generative-models/GAN/conditional_gan/cifar100_result/basic_2017-05-16 15:52:13.303939_0/D_10000.model")
+D_model = torch.load("/home/bike/data/beganD_60000.model")
+G_model = torch.load("/home/bike/data/beganG_60000.model")
+
 
 D_hidden_layer = 128
 conv_hidden_num = 128
@@ -167,57 +170,6 @@ for it in range(100000):
  #   timer.checkpoint('start D')
     # Sample data
     # ============ Train D ============#
-    D_solver.zero_grad()
-    z = Variable(torch.randn(mb_size, Z_dim)).cuda()
-    X, c = celebA.batch_next(mb_size,0)
-    X = Variable(X).cuda()
-    AE_x = D(X)
-    d_loss_real = torch.mean(torch.abs(AE_x - X))
-    # z = Variable(torch.FloatTensor(mb_size, Z_dim))
-
-    c_d = Variable(model.set_label_celebA(c.float(),mb_size)).cuda()
-    c = Variable(c).cuda()
-
-    # Dicriminator forward-loss-backward-update
-    fake_image = G(torch.cat([z,c.float()],1))
-    AE_fake = D(fake_image.detach())
-    d_loss_fake = torch.mean(torch.abs(AE_fake - fake_image.detach()))
-
-    d_loss = d_loss_real - k_t * d_loss_fake
-    d_loss.backward()
-    D_solver.step()
-
-    # ============ Train G ============#
-    # zero the grad buffer
-    G_solver.zero_grad()
-#    timer.checkpoint('start G')
-    # Generator forward-loss-backward-update
-    z = Variable(torch.randn(mb_size, Z_dim)).cuda()
-    x_g = torch.cat([z,c.float()],1)
-    fake_image = G(x_g)
-    AE_fake = D(fake_image)
-    g_loss = torch.mean(torch.abs(AE_fake - fake_image))
-
-    g_loss.backward()
-    G_solver.step()
-
-    g_d_balance = (gamma * d_loss_real - d_loss_fake).data[0]
-    k_t += lambda_k * g_d_balance
-    k_t = max(min(1, k_t), 0)
-
-    measure = d_loss_real.data[0] + abs(g_d_balance)
-    measure_history.append(measure)
-
-    if it % lr_update_step == lr_update_step - 1:
-        cur_measure = np.mean(measure_history)
-        if cur_measure > prev_measure * 0.9999:
-            lr *= 0.5
-            for param_group in D_solver.param_groups:
-                param_group['lr'] = param_group['lr'] * 0.5
-            for param_group in G_solver.param_groups:
-                param_group['lr'] = param_group['lr'] * 0.5
-        prev_measure = cur_measure
-
 
     if it % 10 == 0:
  #       timer.checkpoint('start Ev')
@@ -238,66 +190,27 @@ for it in range(100000):
         E_loss_t = criterion_t(E_anch, E_real, E_fake)
         E_loss_t.backward()
         E_solver.step()
-
         # Housekeeping - reset gradient
         # D.zero_grad()
-        G_solver.zero_grad()
+      
         E_solver.zero_grad()
-
-        # For E ( generated data )
-#        timer.checkpoint('start EG')
-        z = Variable(torch.randn(mb_size, Z_dim)).cuda()
-        c = Variable(c).cuda()
-        x_g = torch.cat([z, c.float()], 1)
-        # x_g.data.resize_(mb_size, Z_dim + label_dim, 1, 1)
-        G_sample = G(x_g)
-        E_real = E(G_sample)
-
-        # X3, c3 = celebA.batch_next(mb_size, label= c.data, shuffle=False, Negative = True)
-        c3 = Variable(c3).cuda()
-        x_g2 = torch.cat([z, c3], 1)
-        # x_g2.data.resize_(mb_size, Z_dim + label_dim, 1, 1)
-        G_sample2 = G(x_g2)
-        E_fake = E(G_sample2)
-
-        E_anch = E(X)
-        E_loss_g = criterion_t(E_anch, E_real, E_fake)
-        E_loss_g.backward()
-        lr_tmp = lr
-        for param_group in G_solver.param_groups:
-            param_group['lr'] = 1e-6
-
-        G_solver.step()
-
-        for param_group in G_solver.param_groups:
-            param_group['lr'] = lr_tmp
+            
     #    G_solver.step()
 
 #        timer.checkpoint('End EG')
 
     # Print and plot every now and then
     if it % 500 == 0:
-        print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {},E_loss: {}, measure:{}, k_t : {}, lr = {}'.format(it, d_loss_real.data.tolist(),
-                                                                        d_loss_fake.data.tolist(), g_loss.data.tolist(),E_loss_t.data.tolist(), E_loss_g.data.tolist(),
-                                                                                                  measure,k_t,lr
-                                                                               ))
-        x_fake = generate(zc_fixed, out_dir, idx=it) # get picture G
-        autoencode(x_fixed, out_dir, idx=it, x_fake=x_fake) # get the reconstructed picture D
+        print('Iter-{};E_loss: {}'.format(it,E_loss_t.data.tolist(),
+                              ))
+    
+      
         # print(c)
-        x_g = torch.cat([z, c.float()], 1)
-        # x_g.data.resize_(mb_size, Z_dim + label_dim, 1, 1)
-        samples = G(x_g)
-        samples = samples.data.tolist()[:mb_size]
-        output_path = out_dir + "{}.png".format(it)
-        output_path_real = out_dir +  "{}_standard.png".format(it)
-        owntool.save_color_picture_pixel(samples,output_path,image_size=64,column=4,mb_size = mb_size)
-        owntool.save_color_picture_pixel(X.data.tolist(),output_path_real,image_size = 64,column=4,mb_size = mb_size)
-#        timer.summary()
+       # timer.summary()
 #        timer.reset()
 
     if it % 2500==0:
         for param_group in D_solver.param_groups:
             param_group['lr'] = param_group['lr']*0.9
-        torch.save(G.state_dict(),'{}/G_{}.model'.format(out_dir,str(it)))
-        torch.save(D.state_dict(),'{}/D_{}.model'.format(out_dir,str(it)))
+ 
         torch.save(E.state_dict(),'{}/E_{}.model'.format(out_dir,str(it)))
