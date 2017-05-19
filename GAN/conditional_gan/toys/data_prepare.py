@@ -60,14 +60,23 @@ class Data_2D_Circle():
 				mode_matrix[
 				range((i * self.mode_num + j) * self.mode_size, (i * self.mode_num + j + 1) * self.mode_size, 1),
 				0:2] = np.array(
-					[i * self.distance + random_bias_x, j * self.distance + random_bias_y]).transpose().reshape(
+
+					[pattern_matrix[i*self.mode_num+j,0]  + random_bias_x, pattern_matrix[i*self.mode_num+j,1]
+					  + random_bias_y]).transpose().reshape(
 					self.mode_size, 2)
 		return mode_matrix
 
 	#
 
+
+#test = Data_2D_Circle(320,4,10)
+#result = test.batch_next()
+# print(result)
+#plt.scatter(result[:,0],result[:,1],alpha=0.5)
+#plt.s=
 # test = Net_2D(320,4)
 # result = test.batch_next()
 # # print(result)
 # plt.scatter(result[:,0],result[:,1],alpha=0.5)
 # plt.show()
+

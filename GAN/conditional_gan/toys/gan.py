@@ -28,8 +28,13 @@ gpu = 0
 torch.cuda.set_device(gpu)
 mb_size = 100  # mini-batch_size
 mode_num = 2
+<<<<<<< HEAD
+distance = 10
+data = data_prepare.Data_2D_Circle(mb_size,mode_num,distance)
+=======
 distance = 3
 data = data_prepare.Data_2D(mb_size, mode_num, distance)
+>>>>>>> 5c307d40a44cd12c75b6f817c5ec900fbab1c6b2
 Z_dim = 2
 X_dim = 2
 h_dim = 128
