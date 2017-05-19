@@ -11,9 +11,10 @@ import matplotlib.pyplot as plt
 # 4. the pattern is fixed. ( a circle , a line, the grid)`
 
 class Data_2D():
-	def __init__(self, batch_size, mode_num):
+	def __init__(self, batch_size, mode_num,distance ):
 		self.mode_num = mode_num
 		self.batch_size = batch_size
+                self.distance = distance
 		assert batch_size % (mode_num * mode_num) == 0
 		self.mode_size = batch_size // (mode_num * mode_num)
 
@@ -23,7 +24,7 @@ class Data_2D():
 			for j in range(self.mode_num):
 				random_bias_x = np.random.normal(0,0.1,size=[self.mode_size,1])
 				random_bias_y = np.random.normal(0,0.1,size = [self.mode_size,1])
-				mode_matrix[(i*self.mode_num+j)*self.mode_size:(i*self.mode_num+j+1)*self.mode_size,0:2]=np.array([i+random_bias_x, j +random_bias_y]).transpose().reshape(self.mode_size,2)
+				mode_matrix[range((i*self.mode_num+j)*self.mode_size,(i*self.mode_num+j+1)*self.mode_size,1),0:2]=np.array([i*self.distance+random_bias_x, j*self.distance +random_bias_y]).transpose().reshape(self.mode_size,2)
 		return mode_matrix
 
 

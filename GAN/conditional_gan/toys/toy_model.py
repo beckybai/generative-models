@@ -15,7 +15,7 @@ class G_Net(nn.Module):
             nn.Linear(hidden_dimension,hidden_dimension*2, bias=True),
 	        nn.ELU(),
 	        nn.Linear(hidden_dimension*2, output_dimension, bias= True),
-	        nn.Sigmoid()
+	        nn.ELU()
         )
 
     def forward(self,x):

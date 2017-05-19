@@ -5,13 +5,13 @@ import numpy as np
 import matplotlib as mpl
 from datetime import datetime
 
-# mpl.use('Agg')
+mpl.use('Agg')
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
 from torch.autograd import Variable
-from tensorflow.examples.tutorials.mnist import input_data
+
 import torch.nn as nn
 import torch.nn.functional as F
 import shutil,sys
@@ -25,11 +25,12 @@ if not os.path.exists(out_dir):
     os.makedirs(out_dir)
     shutil.copyfile(sys.argv[0], out_dir + '/training_script.py')
 sys.stdout = mutil.Logger(out_dir)
-gpu = 0
+gpu = 1
 torch.cuda.set_device(gpu)
-mb_size = 64 # mini-batch_size
-mode_num = 4
-data = data_prepare.Data_2D(mb_size,mode_num)
+mb_size =  100# mini-batch_size
+mode_num = 2
+distance = 3
+data = data_prepare.Data_2D(mb_size,mode_num,distance)
 Z_dim = 2
 X_dim = 2
 h_dim = 128
@@ -95,15 +96,16 @@ for it in range(100000):
     G.zero_grad()
 
     # Print and plot every now and then
-    if it % 3000 == 0:
+    if it %1000 == 0:
         print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {}'.format(it, D_loss_real.data.tolist(),D_loss_fake.data.tolist(), G_loss.data.tolist()))
         X = X.cpu().data.numpy()
         G_sample = G_sample.cpu().data.numpy()
-
-        plt.scatter(X[:,0],X[:,1],alpha=0.5,edgecolors='blue')
-        plt.scatter(G_sample[:,0], G_sample[:,1], alpha=0.5,edgecolors='red')
+        plt.scatter(X[:,0],X[:,1],s = 1,edgecolors='blue',color='blue')
+        plt.scatter(G_sample[:,0], G_sample[:,1], s = 1,color='red',edgecolors='red')
         plt.show()
         plt.savefig('{}/hehe_{}.png'.format(out_dir, str(cnt).zfill(3)), bbox_inches='tight')
+        plt.close()
+        cnt+=1
 
 
 
