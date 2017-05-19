@@ -52,6 +52,7 @@ class Data_2D_Circle():
 
 	def batch_next(self):
 		mode_matrix = np.zeros([self.batch_size, 2])
+		pattern_matrix = self.draw_circle(self.distance,self.mode_num)
 		for i in range(self.mode_num):
 			for j in range(self.mode_num):
 				random_bias_x = np.random.normal(0, 0.1, size=[self.mode_size, 1])
