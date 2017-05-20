@@ -20,13 +20,12 @@ import toy_model as model
 import data_prepare
 
 out_dir = './out/gan_{}'.format(datetime.now())
-out_dir = out_dir.replace(" ","_")
+out_dir = out_dir.replace(" ", "_")
 print(out_dir)
 
 if not os.path.exists(out_dir):
 	os.makedirs(out_dir)
 	shutil.copyfile(sys.argv[0], out_dir + '/training_script.py')
-
 
 sys.stdout = mutil.Logger(out_dir)
 gpu = 0
@@ -35,8 +34,7 @@ mb_size = 100  # mini-batch_size
 mode_num = 2
 
 distance = 10
-data = data_prepare.Data_2D_Circle(mb_size,mode_num,distance)
-
+data = data_prepare.Data_2D_Circle(mb_size, mode_num, distance)
 
 Z_dim = 2
 X_dim = 2
@@ -74,7 +72,22 @@ def save_grad(name):
 
 	return hook
 
-z_fixed = Variable(torch.randn(mb_size,Z_dim)).cuda()
+
+z_fixed = Variable(torch.randn(mb_size, Z_dim)).cuda()
+y_fixed,x_fixed = np.mgrid[0:12:100j,-10:13:100j]
+mesh_fixed_cpu = np.array([x_fixed, y_fixed])
+mesh_fixed = Variable(torch.from_numpy(mesh_fixed_cpu).cuda())
+# mesh_fixed.register_hook(save_grad('Mesh'))
+
+
+def get_grad(input,label,name):
+	sample = G(input)
+	sample.regsitor_hook(save_grad(name))
+	d_result = D(sample)
+	loss_real = criterion(d_result,ones_label*label)
+	loss_real.backward()
+	return d_result
+
 
 for it in range(10000):
 	# Sample data
@@ -117,25 +130,29 @@ for it in range(10000):
 
 	# Print and plot every now and then
 	if it % 30 == 0:
-		gd = grads['G']
 		fig, ax = plt.subplots()
-                G_sample_fixed = G(z_fixed)
-		# ax.quiver(G_sample[:, 0], G_sample[:, 1], gd[:, 0], gd[:, 1], G_loss)
-		ax.quiver(G_sample.cpu().data.numpy()[:, 0], G_sample.cpu().data.numpy()[:, 1], gd.cpu().data.numpy()[:, 0],
-		          gd.cpu().data.numpy()[:, 1])
-		ax.set(aspect=1, title='Quiver Plot')
-#		plt.show()
-#		plt.savefig('{}/gaga_{}.png'.format(out_dir,str(cnt).zfill(3)),bbox_inches='tight')
-
 
 		print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {}'.format(it, D_loss_real.data.tolist(),
 		                                                            D_loss_fake.data.tolist(), G_loss.data.tolist()))
 		X = X.cpu().data.numpy()
 		G_sample = G_sample.cpu().data.numpy()
-                G_sample_fixed_numpy = G_sample_fixed.cpu().numpy()
-                D_result = D(G_sample_fixed)
-                loss = cirterion(D_result,zeros
+		get_grad(z_fixed,0,'fixed_false')
+		get_grad(z_fixed,1,'fixed_truth')
+		d_mesh = (get_grad(mesh_fixed,1,'mesh')).cpu().data.numpy()
 
+		G_sample_cpu = G_sample.cpu().data.numpy()
+		gd_cpu = grads['G'].cpu().data.numpy()
+		ax.quiver(G_sample_cpu[:, 0], G_sample_cpu[:, 1], gd_cpu[:, 0], gd_cpu[:, 1])
+
+
+		gd_mesh_cpu = grads['mesh'].data.numpy()
+		ax.quiver(x_fixed,y_fixed,gd_mesh_cpu[:,0],gd_mesh_cpu[:,1],d_mesh)
+
+		gd_fixed_cpu = grads['fixed_truth'].data.numpy()
+		z_fixed_cpu = z_fixed.cpu().data.numpy()
+		ax.quiver(z_fixed_cpu[:,0],z_fixed_cpu[:,1],gd_fixed_cpu[:,0],gd_fixed_cpu[:,1])
+
+		ax.set(aspect=1, title='Quiver Plot')
 
 		plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
 		plt.scatter(G_sample[:, 0], G_sample[:, 1], s=1, color='red', edgecolors='red')
@@ -144,10 +161,7 @@ for it in range(10000):
 		plt.close()
 		cnt += 1
 
+		test_command = os.system("convert -quality 100 -delay 20 {}/*.png {}/video.mp4".format(out_dir, out_dir))
 
-
-test_command = os.system("convert -quality 100 -delay 20 {}/*.png {}/video.mp4".format(out_dir, out_dir))
-
-
-torch.save(G.state_dict(),"{}/G.model".format(out_dir))
-torch.save(D.state_dict(),"{}/D.model".format(out_dir))
+		torch.save(G.state_dict(), "{}/G.model".format(out_dir))
+		torch.save(D.state_dict(), "{}/D.model".format(out_dir))
