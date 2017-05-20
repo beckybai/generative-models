@@ -7,7 +7,7 @@ import sys
 class Logger(object):
     def __init__(self,path):
         self.terminal = sys.stdout
-        self.log = open("{}logfile.log".format(path), "a")
+        self.log = open("{}/logfile.log".format(path), "a")
 
     def write(self, message):
         self.terminal.write(message)

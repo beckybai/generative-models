@@ -44,7 +44,7 @@ class Data_2D_Circle():
 
 	def draw_circle(self, R, part):
 		unit = np.pi / part
-		mode_matrix = np.zeros([])
+		mode_matrix = np.zeros([part,2])
 		for i in range(part):
 			mode_matrix[i,:]=[R*np.cos(unit*i), R*np.sin(unit*i)]
 
@@ -52,7 +52,7 @@ class Data_2D_Circle():
 
 	def batch_next(self):
 		mode_matrix = np.zeros([self.batch_size, 2])
-		pattern_matrix = self.draw_circle(self.distance,self.mode_num)
+		pattern_matrix = self.draw_circle(self.distance,self.mode_num*self.mode_num)
 		for i in range(self.mode_num):
 			for j in range(self.mode_num):
 				random_bias_x = np.random.normal(0, 0.1, size=[self.mode_size, 1])

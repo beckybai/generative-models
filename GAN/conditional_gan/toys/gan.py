@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib as mpl
 from datetime import datetime
 
-# mpl.use('Agg')
+mpl.use('Agg')
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -19,22 +19,25 @@ import mutil
 import toy_model as model
 import data_prepare
 
-out_dir = './out/gan_{}/'.format(datetime.now())
+out_dir = './out/gan_{}'.format(datetime.now())
+out_dir = out_dir.replace(" ","_")
+print(out_dir)
+
 if not os.path.exists(out_dir):
 	os.makedirs(out_dir)
 	shutil.copyfile(sys.argv[0], out_dir + '/training_script.py')
+
+
 sys.stdout = mutil.Logger(out_dir)
 gpu = 0
 torch.cuda.set_device(gpu)
 mb_size = 100  # mini-batch_size
 mode_num = 2
-<<<<<<< HEAD
+
 distance = 10
 data = data_prepare.Data_2D_Circle(mb_size,mode_num,distance)
-=======
-distance = 3
-data = data_prepare.Data_2D(mb_size, mode_num, distance)
->>>>>>> 5c307d40a44cd12c75b6f817c5ec900fbab1c6b2
+
+
 Z_dim = 2
 X_dim = 2
 h_dim = 128
@@ -71,8 +74,9 @@ def save_grad(name):
 
 	return hook
 
+z_fixed = Variable(torch.randn(mb_size,Z_dim)).cuda()
 
-for it in range(100000):
+for it in range(10000):
 	# Sample data
 	z = Variable(torch.randn(mb_size, Z_dim)).cuda()
 	X = data.batch_next()
@@ -112,24 +116,38 @@ for it in range(100000):
 	G.zero_grad()
 
 	# Print and plot every now and then
-	if it % 1000 == 0:
+	if it % 30 == 0:
 		gd = grads['G']
 		fig, ax = plt.subplots()
+                G_sample_fixed = G(z_fixed)
 		# ax.quiver(G_sample[:, 0], G_sample[:, 1], gd[:, 0], gd[:, 1], G_loss)
 		ax.quiver(G_sample.cpu().data.numpy()[:, 0], G_sample.cpu().data.numpy()[:, 1], gd.cpu().data.numpy()[:, 0],
 		          gd.cpu().data.numpy()[:, 1])
 		ax.set(aspect=1, title='Quiver Plot')
-		plt.show()
-		plt.savefig('{}/gaga_{}.png'.format(out_dir,str(cnt).zfill(3)),bbox_inches='tight')
+#		plt.show()
+#		plt.savefig('{}/gaga_{}.png'.format(out_dir,str(cnt).zfill(3)),bbox_inches='tight')
 
 
 		print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {}'.format(it, D_loss_real.data.tolist(),
 		                                                            D_loss_fake.data.tolist(), G_loss.data.tolist()))
 		X = X.cpu().data.numpy()
 		G_sample = G_sample.cpu().data.numpy()
+                G_sample_fixed_numpy = G_sample_fixed.cpu().numpy()
+                D_result = D(G_sample_fixed)
+                loss = cirterion(D_result,zeros
+
+
 		plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
 		plt.scatter(G_sample[:, 0], G_sample[:, 1], s=1, color='red', edgecolors='red')
 		plt.show()
 		plt.savefig('{}/hehe_{}.png'.format(out_dir, str(cnt).zfill(3)), bbox_inches='tight')
 		plt.close()
 		cnt += 1
+
+
+
+test_command = os.system("convert -quality 100 -delay 20 {}/*.png {}/video.mp4".format(out_dir, out_dir))
+
+
+torch.save(G.state_dict(),"{}/G.model".format(out_dir))
+torch.save(D.state_dict(),"{}/D.model".format(out_dir))
