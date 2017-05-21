@@ -81,10 +81,11 @@ def save_grad(name):
 #c_fixed = Variable(torch.from_numpy(mutil.label_num2vec(np.repeat(c_fixed,5)).astype("float32")),volatile=False).cuda()
 #zc_fixed = torch.cat([z_fixed, c_fixed], 1)
 
-
-
-
-zc_fixed.volatile=False
+z_fixed = torch.randn(20,Z_dim)
+c_fixed = np.array(range(0,4))
+c_fixed = torch.from_numpy(mutil.label_num2vec(np.repeat(c_fixed,5)).astype("float32"))
+zc_fixed = torch.cat([z_fixed, c_fixed],1)
+zc_fixed = Variable(zc_fixed, volatile=False).cuda()
 
 grid_num = 100
 y_fixed, x_fixed = np.mgrid[0:12:0.12, 13:-10:-0.23]
@@ -92,10 +93,7 @@ x_fixed, y_fixed = x_fixed.reshape(grid_num * grid_num, 1), y_fixed.reshape(grid
 mesh_fixed_cpu = np.concatenate([x_fixed, y_fixed], 1)
 mesh_fixed = Variable(torch.from_numpy(mesh_fixed_cpu.astype("float32")).cuda())
 
-
 # mesh_fixed.register_hook(save_grad('Mesh'))
-
-
 
 def get_grad(input, label, name, c = False, is_z= True):
 	if(is_z):
@@ -158,7 +156,7 @@ for it in range(30000):
 	gd_fixed_cpu = -grads['fixed_truth'].cpu().data.numpy()
 	# print(gd_fixed_cpu.shape)
 	zc_fixed_cpu = (zc_fixed).cpu().data.numpy()
-	z_fixed.data = z_fixed.data - grads['fixed_truth'].data
+	zc_fixed[:,0:2].data = zc_fixed[:,0:2].data - grads['fixed_truth'][:,0:,2].data
 	G.zero_grad()
 	if it % 5000 == 0:
 		print(zc_fixed_cpu)

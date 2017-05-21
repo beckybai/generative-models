@@ -48,8 +48,8 @@
       <file leaf-file-name="gan_label.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/toys/gan_label.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2148">
-              <caret line="187" column="39" lean-forward="false" selection-start-line="187" selection-start-column="39" selection-end-line="187" selection-end-column="39" />
+            <state relative-caret-position="453">
+              <caret line="183" column="59" lean-forward="true" selection-start-line="183" selection-start-column="59" selection-end-line="183" selection-end-column="59" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -93,9 +93,14 @@
         <entry file="file://$PROJECT_DIR$/toys/data_prepare.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="631">
-              <caret line="75" column="30" lean-forward="false" selection-start-line="75" selection-start-column="30" selection-end-line="75" selection-end-column="30" />
+              <caret line="74" column="13" lean-forward="true" selection-start-line="74" selection-start-column="13" selection-end-line="74" selection-end-column="13" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
+                <marker date="1495400889933" expanded="true" signature="1177:2568" ph="..." />
+                <marker date="1495400889933" expanded="true" signature="1657:2568" ph="..." />
+                <marker date="1495400889933" expanded="true" signature="1875:2479" ph="..." />
+                <marker date="1495400889933" expanded="true" signature="1909:2479" ph="..." />
+                <marker date="1495400889933" expanded="true" signature="2571:2835" ph="..." />
               </folding>
             </state>
           </provider>
@@ -159,6 +164,8 @@
       <find>grf</find>
       <find>get_grad</find>
       <find>mode_num</find>
+      <find>z_fixed</find>
+      <find>d_z_fixed</find>
     </findStrings>
   </component>
   <component name="IdeDocumentHistory">
@@ -557,8 +564,8 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="true" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
-      <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="FLOATING" visible="false" show_stripe_button="true" weight="0.3294979" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" x="874" y="384" width="1046" height="315" />
-      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3294979" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="FLOATING" visible="true" show_stripe_button="true" weight="0.3294979" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" x="874" y="752" width="1046" height="315" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3294979" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Concurrent Activities Diagram" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33472803" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
@@ -678,9 +685,14 @@
     <entry file="file://$PROJECT_DIR$/toys/data_prepare.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="631">
-          <caret line="75" column="30" lean-forward="false" selection-start-line="75" selection-start-column="30" selection-end-line="75" selection-end-column="30" />
+          <caret line="74" column="13" lean-forward="true" selection-start-line="74" selection-start-column="13" selection-end-line="74" selection-end-column="13" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
+            <marker date="1495400889933" expanded="true" signature="1177:2568" ph="..." />
+            <marker date="1495400889933" expanded="true" signature="1657:2568" ph="..." />
+            <marker date="1495400889933" expanded="true" signature="1875:2479" ph="..." />
+            <marker date="1495400889933" expanded="true" signature="1909:2479" ph="..." />
+            <marker date="1495400889933" expanded="true" signature="2571:2835" ph="..." />
           </folding>
         </state>
       </provider>
@@ -707,8 +719,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/toys/gan_label.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2148">
-          <caret line="187" column="39" lean-forward="false" selection-start-line="187" selection-start-column="39" selection-end-line="187" selection-end-column="39" />
+        <state relative-caret-position="453">
+          <caret line="183" column="59" lean-forward="true" selection-start-line="183" selection-start-column="59" selection-end-line="183" selection-end-column="59" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
