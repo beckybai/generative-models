@@ -39,6 +39,7 @@ data = data_prepare.Data_2D_Circle(mb_size, mode_num, distance)
 Z_dim = 2
 X_dim = 2
 h_dim = 128
+c_dim = mode_num*mode_num
 cnt = 0
 
 num = '0'
@@ -47,8 +48,8 @@ num = '0'
 #     print("you have already creat one.")
 #     exit(1)
 
-G = model.G_Net(Z_dim, X_dim, h_dim).cuda()
-D = model.D_Net(X_dim, 1, h_dim).cuda()
+G = model.G_Net(Z_dim+c_dim, X_dim, h_dim).cuda()
+D = model.D_Net(X_dim+c_dim, 1, h_dim).cuda()
 
 G.apply(model.weights_init)
 D.apply(model.weights_init)
@@ -76,6 +77,10 @@ def save_grad(name):
 
 
 z_fixed = Variable(torch.randn(20, Z_dim), volatile=False).cuda()
+c_fixed = np.array(range(0,4))
+c_fixed = Variable(torch.from_numpy(mutil.label_num2vec(np.repeat(c_fixed,5,1)))).cuda()
+zc_fixed = torch.cat([z_fixed, c_fixed], 1)
+
 grid_num = 100
 y_fixed, x_fixed = np.mgrid[0:12:0.12, 13:-10:-0.23]
 x_fixed, y_fixed = x_fixed.reshape(grid_num * grid_num, 1), y_fixed.reshape(grid_num * grid_num, 1)
@@ -87,10 +92,17 @@ mesh_fixed = Variable(torch.from_numpy(mesh_fixed_cpu.astype("float32")).cuda())
 
 
 
-def get_grad(input, label, name):
-	sample = G(input)
+def get_grad(input, label, name, c = False, is_z= True):
+	if(is_z):
+		sample = G(input)
+	else:
+		sample = input
 	sample.register_hook(save_grad(name))
-	d_result = D(sample)
+	if(c):
+		d_result = D(torch.cat([sample,c],1))
+	else:
+		d_result = D(sample)
+
 	ones_label_tmp = Variable(torch.ones([d_result.data.size()[0], 1])).cuda()
 	loss_real = criterion(d_result, ones_label_tmp * label)
 	loss_real.backward()
@@ -102,12 +114,13 @@ for it in range(30000):
 	z = Variable(torch.randn(mb_size, Z_dim)).cuda()
 	X,c = data.batch_next(True) #with label
 	X = Variable(torch.from_numpy(X.astype('float32'))).cuda()
+	c = Variable(torch.from_numpy(mutil.label_num2vec(c).astype('float32'))).cuda()
 
 	D_solver.zero_grad()
 	# Dicriminator forward-loss-backward-update
-	G_sample = G(z)
-	D_real = D(X)
-	D_fake = D(G_sample)
+	G_sample = G(torch.cat([z,c],1))
+	D_real = D(torch.cat([X,c],1))
+	D_fake = D(torch.cat([G_sample,c],1))
 
 	D_loss_real = criterion(D_real, ones_label)
 	D_loss_fake = criterion(D_fake, zeros_label)
@@ -122,10 +135,10 @@ for it in range(30000):
 
 	# Generator forward-loss-backward-update
 	z = Variable(torch.randn(mb_size, Z_dim).cuda(), requires_grad=True)
-	G_sample = G(z)
+	G_sample = G(torch.cat([z,c]))
 	G_sample.register_hook(save_grad('G'))
 	# G_sample.requires_grad= True
-	D_fake = D(G_sample)
+	D_fake = D(torch.cat([G_sample,c]))
 	G_loss = criterion(D_fake, ones_label)
 
 	G_loss.backward()
@@ -134,14 +147,15 @@ for it in range(30000):
 
 	# Housekeeping - reset gradient
 	D.zero_grad()
-	d_z_fixed = get_grad((z_fixed), 1, 'fixed_truth')
+
+	d_z_fixed = get_grad((zc_fixed), 1, 'fixed_truth', is_z=False, c = c_fixed)
 	gd_fixed_cpu = -grads['fixed_truth'].cpu().data.numpy()
 	# print(gd_fixed_cpu.shape)
-	z_fixed_cpu = (z_fixed).cpu().data.numpy()
+	zc_fixed_cpu = (zc_fixed).cpu().data.numpy()
 	z_fixed.data = z_fixed.data - grads['fixed_truth'].data
 	G.zero_grad()
 	if it % 5000 == 0:
-		print(z_fixed_cpu)
+		print(zc_fixed_cpu)
 		lr = lr * 0.5
 		for param_group in G_solver.param_groups:
 			param_group['lr'] = param_group['lr'] * 0.5
@@ -156,33 +170,28 @@ for it in range(30000):
 		                                                            D_loss_fake.data.tolist(), G_loss.data.tolist()))
 		X = X.cpu().data.numpy()
 		G_sample_cpu = G_sample.cpu().data.numpy()
-		#	get_grad((z_fixed),0,'fixed_false')
-		d_g_sample_cpu = get_grad(G_sample.detach(), 1, 'G')
-		#	d_z_fixed = get_grad((z_fixed),1,'fixed_truth')
-		d_mesh = (get_grad(mesh_fixed, 1, 'mesh')).cpu().data.numpy()
+		d_g_sample_cpu = get_grad(torch.cat([G_sample.detach(),c_fixed],1), 1, 'G',c = c_fixed)
 
-		# G_sample_cpu = G_sample.cpu().data.numpy()
 		gd_cpu = -grads['G'].cpu().data.numpy()
 		ax.quiver(G_sample_cpu[:, 0], G_sample_cpu[:, 1], gd_cpu[:, 0], gd_cpu[:, 1], d_g_sample_cpu.cpu().data.numpy(),
 		          units='xy')
 
-		ax.quiver(z_fixed_cpu[:, 0], z_fixed_cpu[:, 1], gd_fixed_cpu[:, 0], gd_fixed_cpu[:, 1],
+		ax.quiver(zc_fixed_cpu[:, 0], zc_fixed_cpu[:, 1], gd_fixed_cpu[:, 0], gd_fixed_cpu[:, 1],
 		          d_z_fixed.cpu().data.numpy(), units='xy')
-		gd_mesh_cpu = -grads['mesh'].cpu().data.numpy()
-		print(gd_mesh_cpu.shape)
-
-		gd_mesh_cpu_x, gd_mesh_cpu_y = np.expand_dims(gd_mesh_cpu[:, 0], 1).reshape(grid_num, grid_num), np.expand_dims(
-			gd_mesh_cpu[:, 1], 1).reshape(grid_num, grid_num)
-		d_mesh = d_mesh.reshape(grid_num, grid_num)
-		x_fixed, y_fixed = x_fixed.reshape(grid_num, grid_num), y_fixed.reshape(grid_num, grid_num)
-		ax.quiver(x_fixed[::3, ::3], y_fixed[::3, ::3], gd_mesh_cpu_x[::3, ::3], gd_mesh_cpu_y[::3, ::3],
-		          d_mesh[::3, ::3], units='xy')
-		#		z_fixed = z_fixed - grads['fixed_truth']
-
-		print(np.abs(gd_fixed_cpu).mean())
-
+		# gd_mesh_cpu = -grads['mesh'].cpu().data.numpy()
+		# print(gd_mesh_cpu.shape)
+		#
+		# gd_mesh_cpu_x, gd_mesh_cpu_y = np.expand_dims(gd_mesh_cpu[:, 0], 1).reshape(grid_num, grid_num), np.expand_dims(
+		# 	gd_mesh_cpu[:, 1], 1).reshape(grid_num, grid_num)
+		# d_mesh = d_mesh.reshape(grid_num, grid_num)
+		# x_fixed, y_fixed = x_fixed.reshape(grid_num, grid_num), y_fixed.reshape(grid_num, grid_num)
+		# ax.quiver(x_fixed[::3, ::3], y_fixed[::3, ::3], gd_mesh_cpu_x[::3, ::3], gd_mesh_cpu_y[::3, ::3],
+		#           d_mesh[::3, ::3], units='xy')
+		#
+		# print(np.abs(gd_fixed_cpu).mean())
+		#
 		ax.set(aspect=1, title='Quiver Plot')
-		plt.scatter(z_fixed_cpu[:, 0], z_fixed_cpu[:, 1], s=1, color='yellow')
+		plt.scatter(zc_fixed_cpu[:, 0], zc_fixed_cpu[:, 1], s=1, color='yellow')
 		plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
 		plt.scatter(G_sample_cpu[:, 0], G_sample_cpu[:, 1], s=1, color='red', edgecolors='red')
 		plt.show()

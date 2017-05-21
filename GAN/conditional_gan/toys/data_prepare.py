@@ -50,9 +50,11 @@ class Data_2D_Circle():
 
 		return mode_matrix
 
-	def batch_next(self):
+	def batch_next(self, need_label = False):
 		mode_matrix = np.zeros([self.batch_size, 2])
+		label_matrix = np.zeros([self.batch_size,1])
 		pattern_matrix = self.draw_circle(self.distance,self.mode_num*self.mode_num)
+		label = 0
 		for i in range(self.mode_num):
 			for j in range(self.mode_num):
 				random_bias_x = np.random.normal(0, 0.1, size=[self.mode_size, 1])
@@ -65,7 +67,13 @@ class Data_2D_Circle():
 					[pattern_matrix[i*self.mode_num+j,0]  + random_bias_x, pattern_matrix[i*self.mode_num+j,1]
 					  + random_bias_y]).transpose().reshape(
 					self.mode_size, 2)
-		return mode_matrix
+				label_matrix[range((i*self.mode_num_+j)*self.mode_size,(i*self.mode_num+j+1)*self.mode_size,1)] = label
+				label+=1
+
+		if(need_label):
+			return mode_matrix, label_matrix
+		else:
+			return mode_matrix
 
 	#
 
