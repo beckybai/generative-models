@@ -76,10 +76,15 @@ def save_grad(name):
 	return hook
 
 
-z_fixed = Variable(torch.randn(20, Z_dim), volatile=False).cuda()
-c_fixed = np.array(range(0,4))
-c_fixed = Variable(torch.from_numpy(mutil.label_num2vec(np.repeat(c_fixed,5,1)))).cuda()
-zc_fixed = torch.cat([z_fixed, c_fixed], 1)
+#z_fixed = Variable(torch.randn(20, Z_dim), volatile=False).cuda()
+#c_fixed = np.array(range(0,4))
+#c_fixed = Variable(torch.from_numpy(mutil.label_num2vec(np.repeat(c_fixed,5)).astype("float32")),volatile=False).cuda()
+#zc_fixed = torch.cat([z_fixed, c_fixed], 1)
+
+
+
+
+zc_fixed.volatile=False
 
 grid_num = 100
 y_fixed, x_fixed = np.mgrid[0:12:0.12, 13:-10:-0.23]
@@ -114,7 +119,7 @@ for it in range(30000):
 	z = Variable(torch.randn(mb_size, Z_dim)).cuda()
 	X,c = data.batch_next(True) #with label
 	X = Variable(torch.from_numpy(X.astype('float32'))).cuda()
-	c = Variable(torch.from_numpy(mutil.label_num2vec(c).astype('float32'))).cuda()
+	c = Variable(torch.from_numpy(mutil.label_num2vec(c.astype('int')).astype('float32'))).cuda()
 
 	D_solver.zero_grad()
 	# Dicriminator forward-loss-backward-update
@@ -135,10 +140,11 @@ for it in range(30000):
 
 	# Generator forward-loss-backward-update
 	z = Variable(torch.randn(mb_size, Z_dim).cuda(), requires_grad=True)
-	G_sample = G(torch.cat([z,c]))
+	print(c.cpu().data.numpy().shape)
+	G_sample = G(torch.cat([z,c],1))
 	G_sample.register_hook(save_grad('G'))
 	# G_sample.requires_grad= True
-	D_fake = D(torch.cat([G_sample,c]))
+	D_fake = D(torch.cat([G_sample,c],1))
 	G_loss = criterion(D_fake, ones_label)
 
 	G_loss.backward()
