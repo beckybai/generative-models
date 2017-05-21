@@ -55,8 +55,9 @@ D.apply(model.weights_init)
 
 """ ===================== TRAINING ======================== """
 
-G_solver = optim.Adam(G.parameters(), lr=1e-4)
-D_solver = optim.Adam(D.parameters(), lr=1e-4)
+lr = 1e-3
+G_solver = optim.Adam(G.parameters(), lr=1e-3)
+D_solver = optim.Adam(D.parameters(), lr=1e-3)
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
@@ -64,7 +65,7 @@ zeros_label = Variable(torch.zeros(mb_size)).cuda()
 criterion = nn.BCELoss()
 
 grads = {}
-skip = (slice(None, 5, 5), slice(None, 5, 5))
+skip = (slice(None, None, 3), slice(None, None, 3))
 
 
 def save_grad(name):
@@ -74,13 +75,14 @@ def save_grad(name):
 	return hook
 
 
-z_fixed = Variable(torch.randn(20, Z_dim)).cuda()
+z_fixed = Variable(torch.randn(20, Z_dim),volatile=False).cuda()
 grid_num = 100
-y_fixed,x_fixed = np.mgrid[0:12:0.12,-10:13:0.23]
+y_fixed,x_fixed = np.mgrid[0:12:0.12,13:-10:-0.23]
 x_fixed, y_fixed = x_fixed.reshape(grid_num*grid_num,1), y_fixed.reshape(grid_num*grid_num,1)
 mesh_fixed_cpu = np.concatenate([x_fixed, y_fixed],1)
 mesh_fixed = Variable(torch.from_numpy(mesh_fixed_cpu.astype("float32")).cuda())
 # mesh_fixed.register_hook(save_grad('Mesh'))
+
 
 
 def get_grad(input,label,name):
@@ -93,7 +95,7 @@ def get_grad(input,label,name):
 	return d_result
 
 
-for it in range(20000):
+for it in range(30000):
 	# Sample data
 	z = Variable(torch.randn(mb_size, Z_dim)).cuda()
 	X = data.batch_next()
@@ -130,46 +132,60 @@ for it in range(20000):
 
 	# Housekeeping - reset gradient
 	D.zero_grad()
+        d_z_fixed = get_grad((z_fixed),1,'fixed_truth')  
+	gd_fixed_cpu = -grads['fixed_truth'].cpu().data.numpy()
+	#print(gd_fixed_cpu.shape)
+	z_fixed_cpu = (z_fixed).cpu().data.numpy()
+	z_fixed.data = z_fixed.data - grads['fixed_truth'].data
 	G.zero_grad()
+        if it % 5000==0:
+		print(z_fixed_cpu)
+		lr = lr *0.5
+		for param_group in G_solver.param_groups:
+			param_group['lr'] = param_group['lr']*0.5
+		for param_group in D_solver.param_groups:
+			param_group['lr'] = param_group['lr']*0.5
 
 	# Print and plot every now and then
-	if it % 100 == 0:
+	if it % 200 == 0:
 		fig, ax = plt.subplots()
 
 		print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {}'.format(it, D_loss_real.data.tolist(),
 		                                                            D_loss_fake.data.tolist(), G_loss.data.tolist()))
 		X = X.cpu().data.numpy()
 		G_sample_cpu = G_sample.cpu().data.numpy()
-		get_grad(G(z_fixed),0,'fixed_false')
-		get_grad(G(z_fixed),1,'fixed_truth')
+	#	get_grad((z_fixed),0,'fixed_false')
+                d_g_sample_cpu = get_grad(G_sample.detach(),1,'G')
+	#	d_z_fixed = get_grad((z_fixed),1,'fixed_truth')
 		d_mesh = (get_grad(mesh_fixed,1,'mesh')).cpu().data.numpy()
 
 		#G_sample_cpu = G_sample.cpu().data.numpy()
 		gd_cpu = -grads['G'].cpu().data.numpy()
-		ax.quiver(G_sample_cpu[:, 0], G_sample_cpu[:, 1], gd_cpu[:, 0], gd_cpu[:, 1])
+		ax.quiver(G_sample_cpu[:, 0], G_sample_cpu[:, 1], gd_cpu[:, 0], gd_cpu[:, 1],d_g_sample_cpu.cpu().data.numpy(),units='xy')
 
-
-		
+		ax.quiver(z_fixed_cpu[:,0],z_fixed_cpu[:,1],gd_fixed_cpu[:,0],gd_fixed_cpu[:,1],d_z_fixed.cpu().data.numpy(),units = 'xy')
                 gd_mesh_cpu = -grads['mesh'].cpu().data.numpy()
                 print(gd_mesh_cpu.shape)
+
 		gd_mesh_cpu_x, gd_mesh_cpu_y = np.expand_dims(gd_mesh_cpu[:,0],1).reshape(grid_num,grid_num), np.expand_dims(gd_mesh_cpu[:,1],1).reshape(grid_num, grid_num)
                 d_mesh = d_mesh.reshape(grid_num ,grid_num)
-                ax.quiver(x_fixed[skip],y_fixed[skip],gd_mesh_cpu_x[skip],gd_mesh_cpu_y[skip],d_mesh[skip],units='inches')
+		x_fixed,y_fixed = x_fixed.reshape(grid_num, grid_num), y_fixed.reshape(grid_num, grid_num)
+                ax.quiver(x_fixed[::3,::3],y_fixed[::3,::3],gd_mesh_cpu_x[::3,::3],gd_mesh_cpu_y[::3,::3],d_mesh[::3,::3],units='xy')
+#		z_fixed = z_fixed - grads['fixed_truth']
 
-		gd_fixed_cpu = -grads['fixed_truth'].cpu().data.numpy()
-		z_fixed_cpu = G(z_fixed).cpu().data.numpy()
-		ax.quiver(z_fixed_cpu[:,0],z_fixed_cpu[:,1],gd_fixed_cpu[:,0],gd_fixed_cpu[:,1])
+		print(np.abs(gd_fixed_cpu).mean())
 
 		ax.set(aspect=1, title='Quiver Plot')
-
+                plt.scatter(z_fixed_cpu[:,0],z_fixed_cpu[:,1],s=1,color='yellow')
 		plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
 		plt.scatter(G_sample_cpu[:, 0], G_sample_cpu[:, 1], s=1, color='red', edgecolors='red')
 		plt.show()
+		plt.ylim((-5,20))
+		plt.xlim((-10,20))
 		plt.savefig('{}/hehe_{}.png'.format(out_dir, str(cnt).zfill(3)), bbox_inches='tight')
 		plt.close()
 		cnt += 1
 
 		test_command = os.system("convert -quality 100 -delay 20 {}/*.png {}/video.mp4".format(out_dir, out_dir))
-
 		torch.save(G.state_dict(), "{}/G.model".format(out_dir))
 		torch.save(D.state_dict(), "{}/D.model".format(out_dir))
