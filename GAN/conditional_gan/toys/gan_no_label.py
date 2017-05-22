@@ -30,8 +30,8 @@ if not os.path.exists(out_dir):
 sys.stdout = mutil.Logger(out_dir)
 gpu = 1
 torch.cuda.set_device(gpu)
-mb_size = 625  # mini-batch_size
-mode_num = 25
+mb_size = 608  # mini-batch_size
+mode_num = 2
 
 distance = 10
 data = data_prepare.Data_2D_Circle(mb_size, mode_num, distance)
@@ -48,8 +48,8 @@ num = '0'
 #     print("you have already creat one.")
 #     exit(1)
 
-G = model.G_Net(Z_dim+c_dim, X_dim, h_dim).cuda()
-D = model.D_Net(X_dim+c_dim, 1, h_dim).cuda()
+G = model.G_Net(Z_dim, X_dim, h_dim).cuda()
+D = model.D_Net(X_dim, 1, h_dim).cuda()
 #G_fake = model.Direct_Net(X_dim+c_dim, 1, h_dim).cuda()
 G.apply(model.weights_init)
 D.apply(model.weights_init)
@@ -102,7 +102,7 @@ def get_grad(input, label, name, c = False, is_z= True):
 		sample = (input)
 	sample.register_hook(save_grad(name))
 	if(c):
-		d_result = D(torch.cat([sample,c],1))
+		d_result = D(sample)
 	else:
 		d_result = D(sample)
 
@@ -115,15 +115,15 @@ def get_grad(input, label, name, c = False, is_z= True):
 for it in range(30000):
 	# Sample data
 	z = Variable(torch.randn(mb_size, Z_dim)).cuda()
-	X,c = data.batch_next(True) #with label
+	X = data.batch_next() #with label
 	X = Variable(torch.from_numpy(X.astype('float32'))).cuda()
-	c = Variable(torch.from_numpy(mutil.label_num2vec(c.astype('int')).astype('float32'))).cuda()
+#	c = Variable(torch.from_numpy(mutil.label_num2vec(c.astype('int')).astype('float32'))).cuda()
 
 	D_solver.zero_grad()
 	# Dicriminator forward-loss-backward-update
-	G_sample = G(torch.cat([z,c],1))
-	D_real = D(torch.cat([X,c],1))
-	D_fake = D(torch.cat([G_sample,c],1))
+	G_sample = G(z)
+	D_real = D(X)
+	D_fake = D(G_sample)
 
 	D_loss_real = criterion(D_real, ones_label)
 	D_loss_fake = criterion(D_fake, zeros_label)
@@ -139,10 +139,10 @@ for it in range(30000):
 	# Generator forward-loss-backward-update
 	z = Variable(torch.randn(mb_size, Z_dim).cuda(), requires_grad=True)
 	#print(c.cpu().data.numpy().shape)
-	G_sample = G(torch.cat([z,c],1))
+	G_sample = G(z)
 	G_sample.register_hook(save_grad('G'))
 	# G_sample.requires_grad= True
-	D_fake = D(torch.cat([G_sample,c],1))
+	D_fake = D(G_sample)
 	G_loss = criterion(D_fake, ones_label)
 
 	G_loss.backward()
@@ -174,7 +174,7 @@ for it in range(30000):
 		                                                            D_loss_fake.data.tolist(), G_loss.data.tolist()))
 		X = X.cpu().data.numpy()
 		G_sample_cpu = G_sample.cpu().data.numpy()
-		d_g_sample_cpu = get_grad(torch.cat([G_sample.detach(),c_fixed],1), 1, 'G',c = c_fixed)
+		d_g_sample_cpu = get_grad(G_sample.detach(), 1, 'G',c = c_fixed)
 
 		gd_cpu = -grads['G'].cpu().data.numpy()
 		ax.quiver(G_sample_cpu[:, 0], G_sample_cpu[:, 1], gd_cpu[:, 0], gd_cpu[:, 1], d_g_sample_cpu.cpu().data.numpy(),
@@ -194,7 +194,7 @@ for it in range(30000):
 		#
 		# print(np.abs(gd_fixed_cpu).mean())
 		#
-		ax.set(aspect=1, title='625 mode')
+		ax.set(aspect=1, title='4 mode')
 #		plt.scatter(zc_fixed_cpu[:, 0], zc_fixed_cpu[:, 1], s=1, color='yellow')
 		plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
 		plt.scatter(G_sample_cpu[:, 0], G_sample_cpu[:, 1], s=1, color='red', edgecolors='red')

@@ -43,7 +43,7 @@ class Data_2D_Circle():
 		self.mode_size = batch_size // (mode_num * mode_num)
 
 	def draw_circle(self, R, part):
-		unit = np.pi / part
+		unit = 2 * np.pi / part
 		mode_matrix = np.zeros([part,2])
 		for i in range(part):
 			mode_matrix[i,:]=[R*np.cos(unit*i), R*np.sin(unit*i)]

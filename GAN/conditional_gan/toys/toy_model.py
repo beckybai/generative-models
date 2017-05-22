@@ -23,6 +23,18 @@ class G_Net(nn.Module):
         return output
 
 
+class Direct_Net(nn.Module):
+    def __init__(self,input_dimension, output_dimension,hidden_dimension=256):
+        # self.c = c
+	self.c = input_dimension
+    def forward(self,x):
+	output = x
+        return output
+
+
+
+
+
 class D_Net(nn.Module):
     def __init__(self,input_dimension,output_dimension, hidden_dimension= 256):
         super(D_Net,self).__init__()
