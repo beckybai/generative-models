@@ -19,9 +19,12 @@ class Logger(object):
         #you might want to specify some extra behavior here.
         pass
 
-def label_num2vec(num_vec):
+def label_num2vec(num_vec, max_label = 2):
     batch_size = num_vec.shape[0]
-    max_label = np.max(num_vec)
+    if(np.max(num_vec)==0) or np.max(num_vec)==np.min(num_vec):
+        pass
+    else:
+        max_label = np.max(num_vec)
 #    print(num_vec)
     label_mat = np.zeros([batch_size,max_label+1])
     for i in range(0,batch_size):
