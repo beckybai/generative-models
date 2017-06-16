@@ -180,8 +180,8 @@ for it in range(100000):
     if it % 200 == 0:
         fig, ax = plt.subplots()
 
-        print('Iter-{}; D_loss_real/fake: {}/{}; G_loss: {}'.format(it, D_loss_real.data.tolist(),
-                                                                    D_loss_fake.data.tolist(), G_loss.data.tolist()))
+        print('Iter-{}; D_accuracy_real/fake: {}/{}; G_accuracy: {}'.format(it, np.round(np.exp(-D_loss_real.data.tolist()[0]), 5),
+            np.round(1 - np.exp(-D_loss_fake.data.tolist()[0]), 5), np.round(np.exp(-G_loss.data.tolist()[0]), 5)))
         X = X.cpu().data.numpy()
         G_sample_cpu = G_sample.cpu().data.numpy()
         d_g_sample_cpu = get_grad(G_sample.detach(), 1, 'G', c=c_fixed)
