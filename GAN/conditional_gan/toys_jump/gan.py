@@ -30,16 +30,20 @@ if not os.path.exists(out_dir):
 sys.stdout = mutil.Logger(out_dir)
 gpu = 0
 torch.cuda.set_device(gpu)
-mb_size = 608  # mini-batch_size
-mode_num = 2
+mb_size = 90  # mini-batch_size
+# mode_num = 2
 
-distance = 10
-data = data_prepare.Data_2D_Circle(mb_size, mode_num, distance)
+# distance = 10
+start_points = np.array([[0,0],[0,1],[0,2]])
+end_points = np.array([[1,0],[1,1],[1,2]])
+data = data_prepare.Straight_Line(90, start_points, end_points, type=1)
+# data = data_prepare.Data_2D_Circle(mb_size, mode_num, distance)
+# data = data_prepare.Straight_Line(mb_size, )
 
 Z_dim = 2
 X_dim = 2
 h_dim = 128
-c_dim = mode_num * mode_num
+# c_dim = mode_num * mode_num
 cnt = 0
 
 num = '0'
@@ -56,9 +60,9 @@ D.apply(model.weights_init)
 
 """ ===================== TRAINING ======================== """
 
-lr = 1e-3
-G_solver = optim.Adam(G.parameters(), lr=1e-3)
-D_solver = optim.Adam(D.parameters(), lr=1e-3)
+lr = 1e-4
+G_solver = optim.Adam(G.parameters(), lr=1e-4)
+D_solver = optim.Adam(D.parameters(), lr=1e-4)
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
@@ -82,15 +86,26 @@ def save_grad(name):
 # zc_fixed = torch.cat([z_fixed, c_fixed], 1)
 
 z_fixed = torch.randn(20, Z_dim)
-c_fixed = np.array(range(0, mode_num * mode_num))
-c_fixed = Variable(
-    torch.from_numpy(mutil.label_num2vec(np.repeat(c_fixed, mb_size // (mode_num * mode_num))).astype("float32")),
-    volatile=False).cuda()
+# c_fixed = np.array(range(0, mode_num * mode_num))
+# c_fixed = Variable(
+#     torch.from_numpy(mutil.label_num2vec(np.repeat(c_fixed, mb_size // (mode_num * mode_num))).astype("float32")),
+#     volatile=False).cuda()
 # zc_fixed = torch.cat([z_fixed, c_fixed],1)
 # zc_fixed = Variable(zc_fixed, volatile=False).cuda()
 
 grid_num = 100
-y_fixed, x_fixed = np.mgrid[-15:15:0.3, 15:-15:-0.3]
+
+top_line = 4
+down_line =-1
+td_interval = (top_line-down_line)/100.0
+left_line = -1
+right_line = 2
+lr_interval = (right_line-left_line)/100.0
+
+y_fixed, x_fixed = np.mgrid[down_line:top_line:td_interval, right_line:left_line:-lr_interval]
+
+# y_fixed, x_fixed = np.mgrid[ left_line:right_line:lr_interval,top_line:down_line:-td_interval]
+
 x_fixed, y_fixed = x_fixed.reshape(grid_num * grid_num, 1), y_fixed.reshape(grid_num * grid_num, 1)
 mesh_fixed_cpu = np.concatenate([x_fixed, y_fixed], 1)
 mesh_fixed = Variable(torch.from_numpy(mesh_fixed_cpu.astype("float32")).cuda())
@@ -184,7 +199,7 @@ for it in range(100000):
             np.round(1 - np.exp(-D_loss_fake.data.tolist()[0]), 5), np.round(np.exp(-G_loss.data.tolist()[0]), 5)))
         X = X.cpu().data.numpy()
         G_sample_cpu = G_sample.cpu().data.numpy()
-        d_g_sample_cpu = get_grad(G_sample.detach(), 1, 'G', c=c_fixed)
+        d_g_sample_cpu = get_grad(G_sample.detach(), 1, 'G')
 
         gd_cpu = -grads['G'].cpu().data.numpy()
         ax.quiver(G_sample_cpu[:, 0], G_sample_cpu[:, 1], gd_cpu[:, 0], gd_cpu[:, 1], d_g_sample_cpu.cpu().data.numpy(),
@@ -224,9 +239,9 @@ for it in range(100000):
         plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
         plt.scatter(G_sample_cpu[:, 0], G_sample_cpu[:, 1], s=1, color='red', edgecolors='red')
         plt.show()
-        plt.ylim((-15, 15))
-        plt.xlim((-15, 15))
-        plt.savefig('{}/hehe_{}.png'.format(out_dir, str(cnt).zfill(3)), bbox_inches='tight')
+        plt.ylim((down_line, top_line))
+        plt.xlim((left_line, right_line))
+        plt.savefig('{}/hehe_{}.png'.format(out_dir, str(cnt).zfill(3)), bbox_inches='tight', dpi=400)
         plt.close()
         cnt += 1
 
