@@ -3,6 +3,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 
 
+
 class Data_2D_Circle():
     def __init__(self, batch_size, mode_num, distance, noise_variance = 1):
         self.mode_num = mode_num
