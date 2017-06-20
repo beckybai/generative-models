@@ -1,8 +1,11 @@
 import numpy as np
 import matplotlib as mpl
-# mpl.use('Agg')
+mpl.use('Agg')
 import matplotlib.pyplot as plt
-
+import torch
+import random
+from torchvision import datasets, transforms
+import mutil
 
 
 
@@ -50,7 +53,14 @@ class Straight_Line():
                 sample_list[i:i+self.single_pattern_num, 0:self.dimension ] = self.sample_a_line(i//self.single_pattern_num, self.single_pattern_num)
         return sample_list
 
+
+# class Circle_Twinkle():
+#     def __init__(self, ):
+
+
+
 # testing code
+<<<<<<< HEAD
 start_points = np.array([[0,0],[0,1],[0,2]])
 end_points = np.array([[1,0],[1,1],[1,2]])
 data = Straight_Line(90, start_points, end_points, type=1)
@@ -65,17 +75,104 @@ tmp_data = data.batch_next()
 #         self.distance = distance
 #         self.noise_variance = noise_variance
 #         assert batch_size % (mode_num * mode_num) == 0
+=======
+# start_points = np.array([[0,0],[0,1],[0,2]])
+# end_points = np.array([[1,0],[1,1],[1,2]])
+# data = Straight_Line(90, start_points, end_points, type=1)
+# tmp_data = data.batch_next()
+# plt.scatter(tmp_data[:,0], tmp_data[:,1])
+# plt.show()
+
+class Data_2D_Circle():
+    def __init__(self, batch_size, R, mode_num = 8,noise_variance = 0.02):
+        self.mode_num = mode_num
+        self.batch_size = batch_size
+        self.R = R
+        # self.distance = distance
+        self.noise_variance = noise_variance
+        assert batch_size % mode_num == 0
+        self.mode_size = batch_size // mode_num
+>>>>>>> ae63e762f33b386ac4deff32850a45e5519af39c
 #         self.mode_size = batch_size // (mode_num * mode_num)
 #
-#     def draw_circle(self, R, part):
-#         unit = 2 * np.pi / part
-#         mode_matrix = np.zeros([part, 2])
-#         for i in range(part):
-#             mode_matrix[i, :] = [R * np.cos(unit * i), R * np.sin(unit * i)]
+    def draw_circle(self):
+        unit = 2 * np.pi / self.mode_num
+        mode_matrix = np.zeros([self.mode_num, 2])
+        for i in range(self.mode_num):
+            mode_matrix[i, :] = [self.R * np.cos(unit * i), self.R * np.sin(unit * i)]
+        return mode_matrix
 #
-#         return mode_matrix
-#
-#     def batch_next(self, need_label=False, shuffle=False, ):
+    def batch_next(self):
+        # sample_list = np.zeros([self.batch_size,2])
+        pattern_list = self.draw_circle()
+        sample_list = pattern_list.repeat(self.mode_size,axis=0)
+        random_bias_x = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
+        random_bias_y = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
+        sample_list = sample_list + np.concatenate((random_bias_x, random_bias_y),axis=1)
+
+        return sample_list
+
+# data = Data_2D_Circle(80,R = 2)
+# tmp_data = data.batch_next()
+# plt.scatter(tmp_data[:,0], tmp_data[:,1])
+# plt.show()
+
+class Mnist_10():
+    def __init__(self, batch_size):
+        self.batch_size = batch_size
+        data_dir = "/home/sensetime/data/MNIST_data"
+
+        train_loader = torch.utils.data.DataLoader(
+            datasets.MNIST(data_dir, train=True, download=False,
+                           transform=transforms.Compose(
+                               [transforms.ToTensor(), transforms.Normalize((0,), (1,))])),
+            batch_size=60000, shuffle=False)
+
+        for batch_index, (data, label) in enumerate(train_loader):
+            data_list = data.numpy()
+            label_list = label.numpy()
+
+        sorted_label = sorted(range(len(label_list)), key=lambda x: label_list[x])
+        self.new_data_list = data_list[sorted_label]
+        self.new_label_list = label_list[sorted_label]
+
+    def _batch_next(self, size, label=list(range(10)), shuffle=True):
+        class_num = 5000
+        class_num_stone = np.array([0,5924,12666,18624,24755,30597,
+                                    36018,41936,48201,54052])
+        ls = np.size(label)
+        if not shuffle:
+            assert (size % ls == 0)
+            unit = size // ls  # given the total number of the picture and the classes we need, calculate the number of each class
+            return_list = np.zeros([size, 1, 28, 28])
+            return_label = np.zeros([size])
+            for i, il in enumerate(label):
+                index = [int(class_num * random.random()) for _ in range(unit)]
+                index = class_num_stone[i].astype('int')+index
+                # index = class_num * il * np.ones(np.shape(index)).astype(int) + index
+                return_list[i * unit:(i + 1) * unit] = self.new_data_list[index]
+                return_label[i * unit:(i + 1) * unit] = il
+        else:
+            index = [int(60000 * random.random()) for i in range(size)]
+            return_list = self.new_data_list[index]
+            return_label = self.new_label_list[index]
+
+        # return [return_list, return_label]
+        return return_list
+
+    def batch_next(self):
+        tmp_data = self._batch_next(10,shuffle=False)
+        assert self.batch_size % 10 ==0
+        repeat_num = self.batch_size // 10
+        tmp_data = tmp_data.repeat(repeat_num, axis = 0)
+        return tmp_data
+
+# testing code
+# data = Mnist_10(100)
+# tmp_data = data.batch_next()
+# mutil.save_picture_numpy(tmp_data,"./test.png")
+
+
 #         mode_matrix = np.zeros([self.batch_size, 2])
 #         label_matrix = np.zeros([self.batch_size, 1])
 #         pattern_matrix = self.draw_circle(self.distance, self.mode_num * self.mode_num)

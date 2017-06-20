@@ -19,17 +19,13 @@ import mutil
 import toy_model as model
 import data_prepare
 
-out_dir = './out/8_circle_{}'.format(datetime.now())
+out_dir = './out/a_line_repro{}'.format(datetime.now())
 out_dir = out_dir.replace(" ", "_")
 print(out_dir)
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
     shutil.copyfile(sys.argv[0], out_dir + '/training_script.py')
-    shutil.copyfile("./toy_model.py", out_dir + "/toy_model.py")
-    shutil.copyfile("./data_prepare.py", out_dir + "/data_prepare.py")
-    shutil.copyfile("./gan_reproduce.py", out_dir+ "/gan_reproduce.py")
-    shutil.copyfile("./gan.py", out_dir+ "/gan.py")
 
 sys.stdout = mutil.Logger(out_dir)
 gpu = 0
@@ -41,13 +37,13 @@ sample_point = 10000
 # distance = 10
 # start_points = np.array([[0,0],[0,1],[0,2]])
 # end_points = np.array([[1,0],[1,1],[1,2]])
-start_points = np.array([[0,0]])
+start_points = np.array([[-1,0]])
 end_points = np.array([[1,0]])
 Z_dim = 2
 X_dim = 2
 h_dim = 128
 
-data = data_prepare.Straight_Line(90, start_points, end_points, type=1)
+data = data_prepare.Straight_Line(mb_size, start_points, end_points, type=1)
 # data = data_prepare.Data_2D_Circle(mb_size,R = 2)
 z_draw = Variable(torch.randn(sample_point, Z_dim)).cuda()
 
@@ -72,8 +68,26 @@ lr_interval = (right_line-left_line)/100.0
 
 
 
-G = model.G_Net(Z_dim, X_dim, h_dim).cuda()
-D = model.D_Net(X_dim, 1, h_dim).cuda()
+G = model.G_Net_reproduce(Z_dim, X_dim).cuda()
+D = model.D_Net_reproduce(X_dim, 1).cuda()
+#
+# class D_Net_reproduce(nn.Module):
+#     def __init__(self, input_dimension, output_dimension, hidden_dimension=128):
+#         super(D_Net_reproduce, self).__init__()
+#         self.main = nn.Sequential(
+#             nn.Linear(input_dimension, hidden_dimension, bias=True),
+#             nn.ELU(),
+#             nn.Linear(hidden_dimension, hidden_dimension * 2, bias=True),
+#             nn.ELU(),
+#             nn.Linear(hidden_dimension * 2, hidden_dimension*4, bias=True),
+#             nn.ELU(),
+#             nn.Linear(hidden_dimension*4, output_dimension, bias=True),
+#             nn.Sigmoid()
+#         )
+#
+#     def forward(self, x):
+#         output = self.main(x)
+#         return output
 
 # G_fake = model.Direct_Net(X_dim+c_dim, 1, h_dim).cuda()
 G.apply(model.weights_init)
@@ -82,8 +96,8 @@ D.apply(model.weights_init)
 """ ===================== TRAINING ======================== """
 
 lr = 1e-4
-G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
-D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
+G_solver = optim.Adam(G.parameters(), lr=1e-3,betas=[0.9,0.999])
+D_solver = optim.Adam(D.parameters(), lr=1e-3,betas=[0.9,0.999])
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
@@ -248,7 +262,7 @@ for it in range(100000):
         #
         # print(np.abs(gd_fixed_cpu).mean())
         #
-        ax.set(aspect=1, title="8 circles")
+        ax.set(aspect=1, title="1 line")
         #		plt.scatter(zc_fixed_cpu[:, 0], zc_fixed_cpu[:, 1], s=1, color='yellow')
         plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
         plt.scatter(G_sample_cpu[:, 0], G_sample_cpu[:, 1], s=0.2, color='red', edgecolors='red', alpha = 0.1)
