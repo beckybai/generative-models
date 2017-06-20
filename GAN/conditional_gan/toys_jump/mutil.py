@@ -11,7 +11,8 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-
+# from scipy.spatial import distance
+import math
 
 class Logger(object):
     def __init__(self,path):
@@ -118,3 +119,58 @@ def save_color_picture_pixel(pic, output_dir, column = 10, image_size = 32,mb_si
         rows.append(np.concatenate(reconx[i::column], 1))
     reconx = np.concatenate(rows, 0)
     scipy.misc.imsave(output_dir, reconx)
+
+def distance(p0, p1):
+
+    p0, p1 = np.array(p0), np.array(p1)
+    p0 = p0.transpose()
+    p1 = p1.transpose()
+    return np.sqrt((p0[0] - p1[0])**2 + (p0[1] - p1[1])**2)
+
+def draw_stat(gsample, rsample,output_dir):
+    # divide gsample into different groups.
+    # calculate the number and save their value into a list.
+    # the type of those two is numpy
+    r_size = rsample.shape[0]
+    g_size = gsample.shape[0]
+    ll = []
+    size_ll = np.zeros(r_size)
+    for tmp_i in range(r_size):
+        ll.append([])
+
+    for tmp_i in range(g_size):
+        dis = distance(np.array([gsample[tmp_i]]).repeat(r_size, axis=0) , rsample)
+        min_index = np.argmin(dis)
+        ll[min_index].append(gsample[tmp_i].tolist())
+        size_ll[min_index] += 1
+
+
+    print(size_ll)
+    pos = list(range(r_size))
+
+    fig, axes = plt.subplots(nrows=2, ncols=1)
+
+
+    lz_index = [x[0] for x in enumerate(size_ll) if x[1] > 0]
+
+    pos = (np.array(pos)[lz_index]).tolist()
+    ll = (np.array(ll)[lz_index]).tolist()
+
+# up
+    if (np.shape(pos)): # just for the grammer right.
+        axes[0].violinplot(ll, pos,points= 20, widths=0.3, showextrema=True, showmeans=True, showmedians=True)
+    else:
+        axes[0].violinplot([ll], [pos],points= 20, widths=0.3, showextrema=True, showmeans=True, showmedians=True)
+
+    axes[0].set_xlim([-1,9])
+    axes[0].set_ylim([-0.1,0.1])
+
+# down
+    axes[1].bar(range(r_size), size_ll, width=0.2)
+    axes[1].set_xlim([-1,9])
+    axes[1].set_ylim([0,10000])
+
+
+    fig.subplots_adjust(hspace=0.4)
+    plt.savefig(output_dir)
+    plt.close()

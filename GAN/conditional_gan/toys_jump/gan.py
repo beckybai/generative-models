@@ -19,7 +19,7 @@ import mutil
 import toy_model as model
 import data_prepare
 
-out_dir = './out/8_circle_{}'.format(datetime.now())
+out_dir = './out/8_circle_add_noise_{}'.format(datetime.now())
 out_dir = out_dir.replace(" ", "_")
 print(out_dir)
 
@@ -45,10 +45,13 @@ start_points = np.array([[0,0]])
 end_points = np.array([[1,0]])
 Z_dim = 2
 X_dim = 2
-h_dim = 128
+h_dim = 16
 
-data = data_prepare.Straight_Line(90, start_points, end_points, type=1)
-# data = data_prepare.Data_2D_Circle(mb_size,R = 2)
+# data = data_prepare.Straight_Line(90, start_points, end_points, type=1)
+data = data_prepare.Data_2D_Circle(mb_size,R = 2)
+data_draw_m = data_prepare.Data_2D_Circle(8,R=2)
+data_draw = data_draw_m.batch_next()
+
 z_draw = Variable(torch.randn(sample_point, Z_dim)).cuda()
 
 
@@ -62,12 +65,12 @@ num = '0'
 #     exit(1)
 grid_num = 100
 
-top_line = 2
-down_line =-2
+top_line = 3
+down_line =-3
 td_interval = (top_line-down_line)/100.0
 
-left_line = -2
-right_line = 2
+left_line = -3
+right_line = 3
 lr_interval = (right_line-left_line)/100.0
 
 
@@ -76,8 +79,8 @@ G = model.G_Net(Z_dim, X_dim, h_dim).cuda()
 D = model.D_Net(X_dim, 1, h_dim).cuda()
 
 # G_fake = model.Direct_Net(X_dim+c_dim, 1, h_dim).cuda()
-G.apply(model.weights_init)
-D.apply(model.weights_init)
+# G.apply(model.weights_init)
+# D.apply(model.weights_init)
 
 """ ===================== TRAINING ======================== """
 
@@ -196,16 +199,9 @@ for it in range(100000):
     # zc_fixed_cpu = (zc_fixed).cpu().data.numpy()
     # zc_fixed[:,0:2].data = zc_fixed[:,0:2].data - grads['fixed_truth'][:,0:,2].data
     G.zero_grad()
-    if it % 5000 == 0:
-        #	print(zc_fixed_cpu)
-        lr = lr * 0.8
-        for param_group in G_solver.param_groups:
-            param_group['lr'] = param_group['lr'] * 0.8
-        for param_group in D_solver.param_groups:
-            param_group['lr'] = param_group['lr'] * 0.5
 
     # Print and plot every now and then
-    if it % 200 == 0:
+    if it % 2000 == 0:
         fig, ax = plt.subplots()
 
         print('Iter-{}; D_accuracy_real/fake: {}/{}; G_accuracy: {}'.format(it, np.round(np.exp(-D_loss_real.data.tolist()[0]), 5),
@@ -213,20 +209,12 @@ for it in range(100000):
         X = X.cpu().data.numpy()
         G_sample = G(z_draw)
         G_sample_cpu = G_sample.cpu().data.numpy()
-        # d_g_sample_cpu = get_grad(G_sample.detach(), 1, 'G')
-
-        # gd_cpu = -grads['G'].cpu().data.numpy()
-        # ax.quiver(G_sample_cpu[:, 0], G_sample_cpu[:, 1], gd_cpu[:, 0], gd_cpu[:, 1], d_g_sample_cpu.cpu().data.numpy(),
-        #           units='xy')
+        mutil.draw_stat(G_sample_cpu, data_draw, '{}/haha_{}.png'.format(out_dir, str(cnt).zfill(3)))
 
         d_mesh = (get_grad(mesh_fixed, 1, 'mesh', is_z=False)).cpu().data.numpy()
-        # print(d_mesh)
 
-        #	ax.quiver(zc_fixed_cpu[:, 0], zc_fixed_cpu[:, 1], gd_fixed_cpu[:, 0], gd_fixed_cpu[:, 1],
-        #	          d_z_fixed.cpu().data.numpy(), units='xy')
         gd_mesh_cpu = -grads['mesh'].cpu().data.numpy()
-        # print(gd_mesh_cpu.shape)
-        #
+
         gd_mesh_cpu_x, gd_mesh_cpu_y = np.expand_dims(gd_mesh_cpu[:, 0], 1).reshape(grid_num, grid_num), np.expand_dims(
             gd_mesh_cpu[:, 1], 1).reshape(grid_num, grid_num)
         d_mesh = d_mesh.reshape(grid_num, grid_num)
@@ -234,22 +222,8 @@ for it in range(100000):
         ax.quiver(x_fixed[::3, ::3], y_fixed[::3, ::3], gd_mesh_cpu_x[::3, ::3], gd_mesh_cpu_y[::3, ::3],
                   d_mesh[::3, ::3], units='xy')
 
-        #	ax.quiver(zc_fixed_cpu[:, 0], zc_fixed_cpu[:, 1], gd_fixed_cpu[:, 0], gd_fixed_cpu[:, 1],
-        #	          d_z_fixed.cpu().data.numpy(), units='xy')
-        # gd_mesh_cpu = -grads['mesh'].cpu().data.numpy()
-        # print(gd_mesh_cpu.shape)
-        #
-        # gd_mesh_cpu_x, gd_mesh_cpu_y = np.expand_dims(gd_mesh_cpu[:, 0], 1).reshape(grid_num, grid_num), np.expand_dims(
-        # 	gd_mesh_cpu[:, 1], 1).reshape(grid_num, grid_num)
-        # d_mesh = d_mesh.reshape(grid_num, grid_num)
-        # x_fixed, y_fixed = x_fixed.reshape(grid_num, grid_num), y_fixed.reshape(grid_num, grid_num)
-        # ax.quiver(x_fixed[::3, ::3], y_fixed[::3, ::3], gd_mesh_cpu_x[::3, ::3], gd_mesh_cpu_y[::3, ::3],
-        #           d_mesh[::3, ::3], units='xy')
-        #
-        # print(np.abs(gd_fixed_cpu).mean())
-        #
         ax.set(aspect=1, title="8 circles")
-        #		plt.scatter(zc_fixed_cpu[:, 0], zc_fixed_cpu[:, 1], s=1, color='yellow')
+
         plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
         plt.scatter(G_sample_cpu[:, 0], G_sample_cpu[:, 1], s=0.2, color='red', edgecolors='red', alpha = 0.1)
         plt.show()
