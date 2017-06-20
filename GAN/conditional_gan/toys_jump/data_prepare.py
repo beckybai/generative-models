@@ -60,11 +60,11 @@ class Straight_Line():
 
 
 # testing code
-<<<<<<< HEAD
-start_points = np.array([[0,0],[0,1],[0,2]])
-end_points = np.array([[1,0],[1,1],[1,2]])
-data = Straight_Line(90, start_points, end_points, type=1)
-tmp_data = data.batch_next()
+
+#start_points = np.array([[0,0],[0,1],[0,2]])
+#end_points = np.array([[1,0],[1,1],[1,2]])
+#data = Straight_Line(90, start_points, end_points, type=1)
+#tmp_data = data.batch_next()
 
 # print(data.batch_next())
 
@@ -75,7 +75,6 @@ tmp_data = data.batch_next()
 #         self.distance = distance
 #         self.noise_variance = noise_variance
 #         assert batch_size % (mode_num * mode_num) == 0
-=======
 # start_points = np.array([[0,0],[0,1],[0,2]])
 # end_points = np.array([[1,0],[1,1],[1,2]])
 # data = Straight_Line(90, start_points, end_points, type=1)
@@ -92,7 +91,6 @@ class Data_2D_Circle():
         self.noise_variance = noise_variance
         assert batch_size % mode_num == 0
         self.mode_size = batch_size // mode_num
->>>>>>> ae63e762f33b386ac4deff32850a45e5519af39c
 #         self.mode_size = batch_size // (mode_num * mode_num)
 #
     def draw_circle(self):
@@ -120,10 +118,10 @@ class Data_2D_Circle():
 class Mnist_10():
     def __init__(self, batch_size):
         self.batch_size = batch_size
-        data_dir = "/home/sensetime/data/MNIST_data"
+        data_dir = "~/data/MNIST_data"
 
         train_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(data_dir, train=True, download=False,
+            datasets.MNIST(data_dir, train=True, download=True,
                            transform=transforms.Compose(
                                [transforms.ToTensor(), transforms.Normalize((0,), (1,))])),
             batch_size=60000, shuffle=False)
@@ -135,8 +133,44 @@ class Mnist_10():
         sorted_label = sorted(range(len(label_list)), key=lambda x: label_list[x])
         self.new_data_list = data_list[sorted_label]
         self.new_label_list = label_list[sorted_label]
+        self.fix_dig = 20# if you want to fix the dataset. this the number of the pictures you want to preserve in total. 20 = 10 * 2
+        class_num = 5000
+        self.fix_num = [int(class_num*random.random()) for _ in range(self.fix_dig)]
+        self.tmp_data = self._batch_next_fixed(self.fix_dig,shuffle=False)
 
-    def _batch_next(self, size, label=list(range(10)), shuffle=True):
+
+    def _batch_next_fixed(self, size, label=list(range(10)), shuffle=True):
+        class_num = 5000
+        class_num_stone = np.array([0,5924,12666,18624,24755,30597,
+                                    36018,41936,48201,54052])
+        ls = np.size(label)
+        if not shuffle:
+            assert (size % ls == 0)
+            unit = size // ls  # given the total number of the picture and the classes we need, calculate the number of each class
+            return_list = np.zeros([size, 1, 28, 28])
+            return_label = np.zeros([size])
+            for i, il in enumerate(label):
+                # index = [int(class_num * random.random()) for _ in range(unit)]
+                index = class_num_stone[i].astype('int')+self.fix_num[i*unit:(i+1)*unit]
+                # index = class_num * il * np.ones(np.shape(index)).astype(int) + index
+                return_list[i * unit:(i + 1) * unit] = self.new_data_list[index]
+                return_label[i * unit:(i + 1) * unit] = il
+        else:
+            index = [int(60000 * random.random()) for i in range(size)]
+            return_list = self.new_data_list[index]
+            return_label = self.new_label_list[index]
+
+        # return [return_list, return_label]
+        return return_list
+
+    def batch_next_fixed(self):
+
+        repeat_num = self.batch_size // 10
+        tmp_data = self.tmp_data.repeat(repeat_num, axis = 0)
+        return tmp_data
+
+
+    def batch_next(self, size, label=list(range(10)), shuffle=True):
         class_num = 5000
         class_num_stone = np.array([0,5924,12666,18624,24755,30597,
                                     36018,41936,48201,54052])
@@ -160,12 +194,12 @@ class Mnist_10():
         # return [return_list, return_label]
         return return_list
 
-    def batch_next(self):
-        tmp_data = self._batch_next(10,shuffle=False)
-        assert self.batch_size % 10 ==0
-        repeat_num = self.batch_size // 10
-        tmp_data = tmp_data.repeat(repeat_num, axis = 0)
-        return tmp_data
+
+
+
+
+
+
 
 # testing code
 # data = Mnist_10(100)
