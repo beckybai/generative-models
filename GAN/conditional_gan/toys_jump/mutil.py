@@ -62,6 +62,27 @@ def save_picture(pic, output_dir,column = 10,image_size=28):
         # add white squra
     scipy.misc.imsave(output_dir, np.concatenate( row_colum , 0 ))
 
+
+# save the pictures by the pixels.
+def save_picture_numpy(pic, output_dir,column = 10,image_size=28):
+    batch_size = np.shape(pic.tolist())[0]
+    # column = 6
+    row = batch_size // column
+    rec_data = np.reshape(pic.tolist(), (batch_size, image_size, image_size))
+    rec_data = np.concatenate(rec_data,0)
+    # scipy.misc.imsave(output_dir, rec_data)
+    row_colum = []
+    for i in range(row):
+        rows = []
+        for j in range(column):
+            rows.append(rec_data[(column*i+j)*image_size:(column*i+ (j+1))*image_size])
+        rows_whole = np.concatenate(rows,1)
+        rows_white = np.concatenate([np.array(rows_whole),np.ones([2,image_size*column])])
+        row_colum.append(rows_white)
+        # add white squra
+    scipy.misc.imsave(output_dir, np.concatenate( row_colum , 0 ))
+
+
 def extract(v):
     return v.data.storage().tolist()
 

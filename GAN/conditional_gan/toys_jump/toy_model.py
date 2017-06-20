@@ -7,7 +7,7 @@ import torch.functional as F
 
 
 class G_Net(nn.Module):
-    def __init__(self, input_dimension, output_dimension, hidden_dimension=256):
+    def __init__(self, input_dimension, output_dimension, hidden_dimension=10):
         # self.c = c
         super(G_Net, self).__init__()
         self.pipeline1 = nn.Sequential(
@@ -25,6 +25,26 @@ class G_Net(nn.Module):
         output = self.pipeline1(x)
         return output
 
+class G_Net_reproduce(nn.Module):
+    def __init__(self, input_dimension, output_dimension, hidden_dimension=128):
+        # self.c = c
+        super(G_Net_reproduce, self).__init__()
+        self.pipeline1 = nn.Sequential(
+            nn.Linear(input_dimension, hidden_dimension, bias=True),
+            nn.ReLU(),
+            nn.Linear(hidden_dimension, hidden_dimension*2, bias=True),
+            nn.ReLU(),
+            # nn.Linear(hidden_dimension, output_dimension, bias=True)
+            nn.Linear(hidden_dimension*2, hidden_dimension*4, bias=True),
+            nn.ELU(),
+            nn.Linear(hidden_dimension * 4, output_dimension, bias=True),
+            	        # nn.ELU()
+        )
+
+    def forward(self, x):
+        output = self.pipeline1(x)
+        return output
+
 
 class Direct_Net(nn.Module):
     def __init__(self, input_dimension, output_dimension, hidden_dimension=256):
@@ -36,8 +56,27 @@ class Direct_Net(nn.Module):
         return output
 
 class D_Net(nn.Module):
-    def __init__(self, input_dimension, output_dimension, hidden_dimension=256):
+    def __init__(self, input_dimension, output_dimension, hidden_dimension=10):
         super(D_Net, self).__init__()
+        self.main = nn.Sequential(
+            nn.Linear(input_dimension, hidden_dimension, bias=True),
+            nn.ELU(),
+            nn.Linear(hidden_dimension, hidden_dimension * 2, bias=True),
+            nn.ELU(),
+            nn.Linear(hidden_dimension * 2, hidden_dimension*4, bias=True),
+            nn.ELU(),
+            nn.Linear(hidden_dimension*4, output_dimension, bias=True),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        output = self.main(x)
+        return output
+
+
+class D_Net_reproduce(nn.Module):
+    def __init__(self, input_dimension, output_dimension, hidden_dimension=128):
+        super(D_Net_reproduce, self).__init__()
         self.main = nn.Sequential(
             nn.Linear(input_dimension, hidden_dimension, bias=True),
             nn.ELU(),
@@ -70,6 +109,8 @@ class D_Net_w(nn.Module):
     def forward(self, x):
         output = self.main(x)
         return output
+
+
 
 class E_Net(nn.Module):
     def __init__(self, input_dimension, output_dimension, hidden_dimension=256):
