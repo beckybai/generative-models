@@ -100,6 +100,36 @@ class Data_2D_Circle():
 # plt.scatter(tmp_data[:,0], tmp_data[:,1])
 # plt.show()
 
+class Data_HD_Circle():
+    def __init__(self, batch_size, R, mode_num = 8,noise_variance = 0.02,dimension = 2):
+        self.mode_num = mode_num
+        self.dimension = dimension
+        self.batch_size = batch_size
+        self.R = R
+        # self.distance = distance
+        self.noise_variance = noise_variance
+        assert batch_size % mode_num == 0
+        self.mode_size = batch_size // mode_num
+#         self.mode_size = batch_size // (mode_num * mode_num)
+#
+    def draw_circle(self):
+        unit = 2 * np.pi / self.mode_num
+        mode_matrix = np.zeros([self.mode_num, 2])
+        for i in range(self.mode_num):
+            mode_matrix[i, :] = [self.R * np.cos(unit * i), self.R * np.sin(unit * i)]
+        return mode_matrix
+#
+    def batch_next(self):
+        # sample_list = np.zeros([self.batch_size,2])
+        pattern_list = self.draw_circle()
+        sample_list = pattern_list.repeat(self.mode_size,axis=0)
+        random_bias_x = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
+        random_bias_y = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
+        sample_list = sample_list + np.concatenate((random_bias_x, random_bias_y),axis=1)
+
+        return sample_list
+
+
 class Mnist_10():
     def __init__(self, batch_size):
         self.batch_size = batch_size
@@ -178,14 +208,6 @@ class Mnist_10():
 
         # return [return_list, return_label]
         return return_list
-
-
-
-
-
-
-
-
 # testing code
 # data = Mnist_10(100)
 # tmp_data = data.batch_next()

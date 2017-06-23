@@ -1,4 +1,12 @@
 1. 删除新生成的点的梯度，因为他们跟后面的网格点并不是一个尺度上的东西。
+[finish]
 2. 增加在“绘制”图中生成点的数目。方便之后观察。
 2.1. 发现，仅仅通过观察无法得到准确结论，最靠谱的方法是对周边的八个点进行一个统计
+[finish]
 3. 更改网络结构， 更改各项参数，使之完全适应于原网络从而达到复现原有实验结果的目的
+[finish]
+4. change to sgd
+5. use a script to explore the condition in the high dimension.
+6. draw the projection of the generated data
+7. what will happen, if the space is a high dimension space,
+but the data is lying on a very low dimension curve?

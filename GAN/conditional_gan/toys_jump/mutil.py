@@ -158,12 +158,12 @@ def draw_stat(gsample, rsample,output_dir):
 
 # up
     if (np.shape(pos)): # just for the grammer right.
-        axes[0].violinplot(ll, pos,points= 20, widths=0.3, showextrema=True, showmeans=True, showmedians=True)
+        axes[0].violinplot(ll, pos,points= 100, widths=0.3, showextrema=True, showmeans=True, showmedians=True)
     else:
-        axes[0].violinplot([ll], [pos],points= 20, widths=0.3, showextrema=True, showmeans=True, showmedians=True)
+        axes[0].violinplot([ll], [pos],points= 100, widths=0.3, showextrema=True, showmeans=True, showmedians=True)
 
     axes[0].set_xlim([-1,9])
-    axes[0].set_ylim([-0.1,0.1])
+    axes[0].set_ylim([-10,10])
 
 # down
     axes[1].bar(range(r_size), size_ll, width=0.2)
