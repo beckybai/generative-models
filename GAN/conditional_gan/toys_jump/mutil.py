@@ -131,6 +131,7 @@ def draw_stat(gsample, rsample,output_dir):
     # divide gsample into different groups.
     # calculate the number and save their value into a list.
     # the type of those two is numpy
+    r_dim = rsample.shape[1]
     r_size = rsample.shape[0]
     g_size = gsample.shape[0]
     ll = []
@@ -162,12 +163,12 @@ def draw_stat(gsample, rsample,output_dir):
     else:
         axes[0].violinplot([ll], [pos],points= 100, widths=0.3, showextrema=True, showmeans=True, showmedians=True)
 
-    axes[0].set_xlim([-1,9])
+    axes[0].set_xlim([-1,r_dim+1])
     axes[0].set_ylim([-10,10])
 
 # down
     axes[1].bar(range(r_size), size_ll, width=0.2)
-    axes[1].set_xlim([-1,9])
+    axes[1].set_xlim([-1,r_dim+1])
     axes[1].set_ylim([0,10000])
 
 

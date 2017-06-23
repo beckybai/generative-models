@@ -34,7 +34,7 @@ if not os.path.exists(out_dir):
 sys.stdout = mutil.Logger(out_dir)
 gpu = 1
 torch.cuda.set_device(gpu)
-mb_size = 96  # mini-batch_size
+mb_size = 100  # mini-batch_size
 # mode_num = 2
 sample_point = 10000
 
@@ -43,14 +43,16 @@ sample_point = 10000
 # end_points = np.array([[1,0],[1,1],[1,2]])
 start_points = np.array([[0,0]])
 end_points = np.array([[1,0]])
-Z_dim = 3
-X_dim = 3
+Z_dim = 10
+X_dim = 10
 h_dim = 16
-dim = 3
+dim = 10
 
 # data = data_prepare.Straight_Line(90, start_points, end_points, type=1)
-data = data_prepare.Data_HD_Circle(mb_size,mode_num=6, R = 2,dimension = dim)
-data_draw_m = data_prepare.Data_HD_Circle(6, R=2,mode_num=6, dimension = dim)
+
+# attention ! here mode_num and dimension have nearly the same physical meaning!!!
+data = data_prepare.Data_HD_Circle(mb_size,mode_num=2*dim, R = 2,dimension = dim)
+data_draw_m = data_prepare.Data_HD_Circle(2*dim, R=2,mode_num=2*dim, dimension = dim)
 # data_draw_m = data_prepare.Data_2D_Circle(8,R=2)
 data_draw = data_draw_m.batch_next()
 
@@ -88,9 +90,15 @@ D = model.D_Net(X_dim, 1, h_dim).cuda()
 
 lr = 1e-4
 G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
+<<<<<<< HEAD
 #G_solver = optim.SGD(G.parameters(), lr=1e-3)
 D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
 #D_solver = optim.SGD(D.parameters(), lr=1e-3)
+=======
+# G_solver = optim.SGD(G.parameters(), lr=1e-3)
+D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
+# D_solver = optim.SGD(D.parameters(), lr=1e-3)
+>>>>>>> 2fe2dd6a7656fd7ac11d5b8ff1671d3a31ec53bb
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
@@ -200,11 +208,19 @@ for it in range(100000):
 
    # if it % 5000 == 0:
         #	print(zc_fixed_cpu)
+<<<<<<< HEAD
    #     lr = lr * 0.8
    #     for param_group in G_solver.param_groups:
    #         param_group['lr'] = param_group['lr'] * 0.8
    #     for param_group in D_solver.param_groups:
    #         param_group['lr'] = param_group['lr'] * 0.5
+=======
+        lr = lr * 0.8
+        for param_group in G_solver.param_groups:
+            param_group['lr'] = param_group['lr'] * 0.9
+        for param_group in D_solver.param_groups:
+            param_group['lr'] = param_group['lr'] * 0.9
+>>>>>>> 2fe2dd6a7656fd7ac11d5b8ff1671d3a31ec53bb
 
     G.zero_grad()
 
