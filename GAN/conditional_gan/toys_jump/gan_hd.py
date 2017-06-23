@@ -19,7 +19,7 @@ import mutil
 import toy_model as model
 import data_prepare
 
-out_dir = './out/8_circle_sgd_{}'.format(datetime.now())
+out_dir = './out/8_circle_add_noise_{}'.format(datetime.now())
 out_dir = out_dir.replace(" ", "_")
 print(out_dir)
 
@@ -85,11 +85,8 @@ D = model.D_Net(X_dim, 1, h_dim).cuda()
 """ ===================== TRAINING ======================== """
 
 lr = 1e-4
-# G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
-# D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
-G_solver = optim.SGD(G.parameters(), lr=1e-4)
-D_solver = optim.SGD(D.parameters(), lr=1e-4)
-
+G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
+D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
