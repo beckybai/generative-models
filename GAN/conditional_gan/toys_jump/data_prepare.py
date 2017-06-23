@@ -89,8 +89,8 @@ class Data_2D_Circle():
         # sample_list = np.zeros([self.batch_size,2])
         pattern_list = self.draw_circle()
         sample_list = pattern_list.repeat(self.mode_size,axis=0)
-        random_bias_x = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])*0
-        random_bias_y = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])*0
+        random_bias_x = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
+        random_bias_y = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
         sample_list = sample_list + np.concatenate((random_bias_x, random_bias_y),axis=1)
 
         return sample_list
