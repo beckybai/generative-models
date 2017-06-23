@@ -101,7 +101,7 @@ class Data_2D_Circle():
 # plt.show()
 
 class Data_HD_Circle():
-    def __init__(self, batch_size, R, mode_num = 8,noise_variance = 0.02,dimension = 2):
+    def __init__(self, batch_size, R, mode_num ,dimension,noise_variance = 0.02, ):
         self.mode_num = mode_num
         self.dimension = dimension
         self.batch_size = batch_size
