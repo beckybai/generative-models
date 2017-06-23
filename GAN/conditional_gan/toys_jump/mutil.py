@@ -127,7 +127,7 @@ def distance(p0, p1):
     p1 = p1.transpose()
     return np.sqrt((p0[0] - p1[0])**2 + (p0[1] - p1[1])**2)
 
-def draw_stat(gsample, rsample,output_dir):
+def draw_stat(gsample, rsample,output_dir, mode_num):
     # divide gsample into different groups.
     # calculate the number and save their value into a list.
     # the type of those two is numpy
@@ -163,12 +163,12 @@ def draw_stat(gsample, rsample,output_dir):
     else:
         axes[0].violinplot([ll], [pos],points= 100, widths=0.3, showextrema=True, showmeans=True, showmedians=True)
 
-    axes[0].set_xlim([-1,r_dim+1])
+    axes[0].set_xlim([-1,mode_num+1])
     axes[0].set_ylim([-10,10])
 
 # down
     axes[1].bar(range(r_size), size_ll, width=0.2)
-    axes[1].set_xlim([-1,r_dim+1])
+    axes[1].set_xlim([-1,mode_num+1])
     axes[1].set_ylim([0,10000])
 
 

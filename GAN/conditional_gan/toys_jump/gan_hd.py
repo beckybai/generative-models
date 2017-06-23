@@ -19,7 +19,7 @@ import mutil
 import toy_model as model
 import data_prepare
 
-out_dir = './out/d3_z3{}'.format(datetime.now())
+out_dir = './out/d10_z10_h128_adam_nd{}'.format(datetime.now())
 out_dir = out_dir.replace(" ", "_")
 print(out_dir)
 
@@ -28,7 +28,7 @@ if not os.path.exists(out_dir):
     shutil.copyfile(sys.argv[0], out_dir + '/training_script.py')
     shutil.copyfile("./toy_model.py", out_dir + "/toy_model.py")
     shutil.copyfile("./data_prepare.py", out_dir + "/data_prepare.py")
-    shutil.copyfile("./gan_reproduce.py", out_dir+ "/gan_reproduce.py")
+    shutil.copyfile("./gan_hd.py", out_dir+ "/gan_hd.py")
     shutil.copyfile("./gan.py", out_dir+ "/gan.py")
 
 sys.stdout = mutil.Logger(out_dir)
@@ -45,8 +45,9 @@ start_points = np.array([[0,0]])
 end_points = np.array([[1,0]])
 Z_dim = 10
 X_dim = 10
-h_dim = 16
+h_dim = 128
 dim = 10
+mode_num = 2*dim 
 
 # data = data_prepare.Straight_Line(90, start_points, end_points, type=1)
 
@@ -90,15 +91,10 @@ D = model.D_Net(X_dim, 1, h_dim).cuda()
 
 lr = 1e-4
 G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
-<<<<<<< HEAD
-#G_solver = optim.SGD(G.parameters(), lr=1e-3)
 D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
-#D_solver = optim.SGD(D.parameters(), lr=1e-3)
-=======
+
 # G_solver = optim.SGD(G.parameters(), lr=1e-3)
-D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
 # D_solver = optim.SGD(D.parameters(), lr=1e-3)
->>>>>>> 2fe2dd6a7656fd7ac11d5b8ff1671d3a31ec53bb
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
@@ -208,19 +204,12 @@ for it in range(100000):
 
    # if it % 5000 == 0:
         #	print(zc_fixed_cpu)
-<<<<<<< HEAD
+
    #     lr = lr * 0.8
    #     for param_group in G_solver.param_groups:
    #         param_group['lr'] = param_group['lr'] * 0.8
    #     for param_group in D_solver.param_groups:
    #         param_group['lr'] = param_group['lr'] * 0.5
-=======
-        lr = lr * 0.8
-        for param_group in G_solver.param_groups:
-            param_group['lr'] = param_group['lr'] * 0.9
-        for param_group in D_solver.param_groups:
-            param_group['lr'] = param_group['lr'] * 0.9
->>>>>>> 2fe2dd6a7656fd7ac11d5b8ff1671d3a31ec53bb
 
     G.zero_grad()
 
@@ -233,7 +222,7 @@ for it in range(100000):
         X = X.cpu().data.numpy()
         G_sample = G(z_draw)
         G_sample_cpu = G_sample.cpu().data.numpy()
-        mutil.draw_stat(G_sample_cpu, data_draw, '{}/haha_{}.png'.format(out_dir, str(cnt).zfill(3)))
+        mutil.draw_stat(G_sample_cpu, data_draw, '{}/haha_{}.png'.format(out_dir, str(cnt).zfill(3)),mode_num)
 
         d_mesh = (get_grad(mesh_fixed, 1, 'mesh', is_z=False)).cpu().data.numpy()
 
@@ -246,7 +235,7 @@ for it in range(100000):
         ax.quiver(x_fixed[::3, ::3], y_fixed[::3, ::3], gd_mesh_cpu_x[::3, ::3], gd_mesh_cpu_y[::3, ::3],
                   d_mesh[::3, ::3], units='xy')
 
-        ax.set(aspect=1, title="3d_6mode_{}".format(it))
+        ax.set(aspect=1, title="10d_10mode_{}".format(it))
 
         plt.scatter(X[:, 0], X[:, 1], s=1, edgecolors='blue', color='blue')
         plt.scatter(G_sample_cpu[:, 0], G_sample_cpu[:, 1], s=0.2, color='red', edgecolors='red', alpha = 0.1)
