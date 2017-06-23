@@ -19,7 +19,7 @@ import mutil
 import toy_model as model
 import data_prepare
 
-out_dir = './out/d3_naive{}'.format(datetime.now())
+out_dir = './out/d3_z3{}'.format(datetime.now())
 out_dir = out_dir.replace(" ", "_")
 print(out_dir)
 
@@ -32,7 +32,7 @@ if not os.path.exists(out_dir):
     shutil.copyfile("./gan.py", out_dir+ "/gan.py")
 
 sys.stdout = mutil.Logger(out_dir)
-gpu = 0
+gpu = 1
 torch.cuda.set_device(gpu)
 mb_size = 96  # mini-batch_size
 # mode_num = 2
@@ -87,10 +87,10 @@ D = model.D_Net(X_dim, 1, h_dim).cuda()
 """ ===================== TRAINING ======================== """
 
 lr = 1e-4
-# G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
-G_solver = optim.SGD(G.parameters(), lr=1e-3)
-# D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
-D_solver = optim.SGD(D.parameters(), lr=1e-3)
+G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
+#G_solver = optim.SGD(G.parameters(), lr=1e-3)
+D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
+#D_solver = optim.SGD(D.parameters(), lr=1e-3)
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
@@ -198,13 +198,13 @@ for it in range(100000):
     # Housekeeping - reset gradient
     D.zero_grad()
 
-    if it % 5000 == 0:
+   # if it % 5000 == 0:
         #	print(zc_fixed_cpu)
-        lr = lr * 0.8
-        for param_group in G_solver.param_groups:
-            param_group['lr'] = param_group['lr'] * 0.8
-        for param_group in D_solver.param_groups:
-            param_group['lr'] = param_group['lr'] * 0.5
+   #     lr = lr * 0.8
+   #     for param_group in G_solver.param_groups:
+   #         param_group['lr'] = param_group['lr'] * 0.8
+   #     for param_group in D_solver.param_groups:
+   #         param_group['lr'] = param_group['lr'] * 0.5
 
     G.zero_grad()
 
