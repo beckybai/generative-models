@@ -112,20 +112,37 @@ class Data_HD_Circle():
         self.mode_size = batch_size // mode_num
 #         self.mode_size = batch_size // (mode_num * mode_num)
 #
-    def draw_circle(self):
-        unit = 2 * np.pi / self.mode_num
-        mode_matrix = np.zeros([self.mode_num, 2])
-        for i in range(self.mode_num):
-            mode_matrix[i, :] = [self.R * np.cos(unit * i), self.R * np.sin(unit * i)]
-        return mode_matrix
+    # def draw_circle(self):
+    #     unit = 2 * np.pi / self.mode_num
+    #     mode_matrix = np.zeros([self.mode_num, 2])
+    #     for i in range(self.mode_num):
+    #         mode_matrix[i, :] = [self.R * np.cos(unit * i), self.R * np.sin(unit * i)]
+    #     return mode_matrix
 #
+    def draw_axis_point(self):
+        # if the dimension is n, then we return a vector: 2n * n;
+        axis_points = np.zeros([2*self.dimension, self.dimension])
+        for tmp_i in range(0,2*self.dimension,2):
+            # print tmp_i
+            axis_points[tmp_i][tmp_i // 2]=1
+            axis_points[tmp_i+1][tmp_i // 2 ] = -1
+        return axis_points
+
+
+
     def batch_next(self):
         # sample_list = np.zeros([self.batch_size,2])
-        pattern_list = self.draw_circle()
+        # pattern_list = self.draw_circle()
+        pattern_list = self.draw_axis_point()
         sample_list = pattern_list.repeat(self.mode_size,axis=0)
-        random_bias_x = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
-        random_bias_y = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
-        sample_list = sample_list + np.concatenate((random_bias_x, random_bias_y),axis=1)
+        # random_bias_x = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
+        # random_bias_y = np.random.normal(0, self.noise_variance, size=[self.batch_size, 1])
+        # random_bias_z
+        random_bias = np.zeros([self.dimension,self.batch_size])
+        for i in range(self.dimension):
+            random_bias[i] = np.random.normal(0,self.noise_variance, size= [self.batch_size])
+        # sample_list = sample_list + np.concatenate((random_bias_x, random_bias_y),axis=1)
+        sample_list = sample_list + random_bias.transpose()
 
         return sample_list
 
