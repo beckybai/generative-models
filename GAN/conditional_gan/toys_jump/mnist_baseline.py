@@ -33,7 +33,7 @@ if not os.path.exists(out_dir):
     shutil.copyfile("./gan.py", out_dir+ "/gan.py")
 
 sys.stdout = mutil.Logger(out_dir)
-gpu = 0
+gpu = 1
 torch.cuda.set_device(gpu)
 mb_size = 100  # mini-batch_size
 # mode_num = 2
@@ -66,19 +66,21 @@ num = '0'
 #     exit(1)
 grid_num = 100
 
-top_line = 2
-down_line =-2
-td_interval = (top_line-down_line)/100.0
-
-left_line = -2
-right_line = 2
-lr_interval = (right_line-left_line)/100.0
-
-
-
 G = model.G_Net_conv(in_channel=Z_dim).cuda()
 D = model.D_Net_conv(inchannel=1).cuda()
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        m.weight.data.normal_(0.0, 0.02)
+    # elif classname.find('BatchNorm') != -1:
+    #     m.weight.data.normal_(1.0, 0.02)
+    #     m.bias.data.fill_(0)
+G.apply(weights_init)
+# G.load_state_dict(torch.load('./out_conv_part/G_20000.model'))
+D.apply(weights_init)
+
+# D.load_state_dict(torch.load('./out_conv_part/D_20000.model'))
 # G_fake = model.Direct_Net(X_dim+c_dim, 1, h_dim).cuda()
 # G.apply(model.weights_init)
 # D.apply(model.weights_init)
@@ -86,8 +88,8 @@ D = model.D_Net_conv(inchannel=1).cuda()
 """ ===================== TRAINING ======================== """
 
 lr = 1e-4
-G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
-D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
+G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.9,0.999])
+D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.9,0.999])
 
 ones_label = Variable(torch.ones(mb_size)).cuda()
 zeros_label = Variable(torch.zeros(mb_size)).cuda()
@@ -106,7 +108,7 @@ for it in range(100000):
 
     D_solver.zero_grad()
     # Dicriminator forward-loss-backward-update
-    G_sample = G(z)
+    G_sample = G(z).detach()
     D_real = D(X)
     D_fake = D(G_sample)
 
@@ -142,7 +144,7 @@ for it in range(100000):
             param_group['lr'] = param_group['lr'] * 0.5
 
     # Print and plot every now and then
-    if it % 200 == 0:
+    if it % 2000 == 0:
         fig, ax = plt.subplots()
 
         print('Iter-{}; D_accuracy_real/fake: {}/{}; G_accuracy: {}'.format(it, np.round(np.exp(-D_loss_real.data.tolist()[0]), 5),

@@ -19,7 +19,7 @@ import mutil
 import mnist_model as model
 import data_prepare
 
-out_dir = './out/mnist_10_{}'.format(datetime.now())
+out_dir = './out/mnist_2000_no_decay{}'.format(datetime.now())
 out_dir = out_dir.replace(" ", "_")
 print(out_dir)
 
@@ -33,7 +33,7 @@ if not os.path.exists(out_dir):
     shutil.copyfile("./gan.py", out_dir+ "/gan.py")
 
 sys.stdout = mutil.Logger(out_dir)
-gpu = 0
+gpu = 2
 torch.cuda.set_device(gpu)
 mb_size = 100  # mini-batch_size
 # mode_num = 2
@@ -50,10 +50,12 @@ h_dim = 128
 
 # data = data_prepare.Straight_Line(90, start_points, end_points, type=1)
 # data = data_prepare.Data_2D_Circle(mb_size,R = 2)
-data = data_prepare.Mnist_10(mb_size)
-tmp_data = data.batch_next()
-# mutil.save_picture_numpy(tmp_data,"./test.png")
-z_draw = Variable(torch.randn(mb_size, Z_dim)).cuda()
+data = data_prepare.Mnist_10(mb_size, dataset_size = 1000)
+tmp_data = data.batch_next(10*10, shuffle=False)
+mutil.save_picture_numpy(tmp_data,"./test.png")
+#itmp_data = data.batch_next_fixed()
+#mutil.save_picture_numpy(tmp_data,out_dir+"./test.png")
+#z_draw = Variable(torch.randn(mb_size, Z_dim)).cuda()
 
 
 
@@ -66,19 +68,21 @@ num = '0'
 #     exit(1)
 grid_num = 100
 
-top_line = 2
-down_line =-2
-td_interval = (top_line-down_line)/100.0
-
-left_line = -2
-right_line = 2
-lr_interval = (right_line-left_line)/100.0
-
-
-
 G = model.G_Net_conv(in_channel=Z_dim).cuda()
 D = model.D_Net_conv(inchannel=1).cuda()
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        m.weight.data.normal_(0.0, 0.02)
+    # elif classname.find('BatchNorm') != -1:
+    #     m.weight.data.normal_(1.0, 0.02)
+    #     m.bias.data.fill_(0)
+G.apply(weights_init)
+# G.load_state_dict(torch.load('./out_conv_part/G_20000.model'))
+D.apply(weights_init)
+
+# D.load_state_dict(torch.load('./out_conv_part/D_20000.model'))
 # G_fake = model.Direct_Net(X_dim+c_dim, 1, h_dim).cuda()
 # G.apply(model.weights_init)
 # D.apply(model.weights_init)
@@ -100,13 +104,13 @@ for it in range(100000):
 
     z = Variable(torch.randn(mb_size, Z_dim,1,1)).cuda()
 
-    X = data.batch_next()  # with label
+    X = data.batch_next(mb_size, shuffle=False)  # with label
     X = Variable(torch.from_numpy(X.astype('float32'))).cuda()
     #	c = Variable(torch.from_numpy(mutil.label_num2vec(c.astype('int')).astype('float32'))).cuda()
 
     D_solver.zero_grad()
     # Dicriminator forward-loss-backward-update
-    G_sample = G(z)
+    G_sample = G(z).detach()
     D_real = D(X)
     D_fake = D(G_sample)
 
@@ -135,14 +139,14 @@ for it in range(100000):
     # Housekeeping - reset gradient
     D.zero_grad()
     G.zero_grad()
-    if it % 5000 == 0:
-        for param_group in G_solver.param_groups:
-            param_group['lr'] = param_group['lr'] * 0.8
-        for param_group in D_solver.param_groups:
-            param_group['lr'] = param_group['lr'] * 0.5
+#    if it % 5000 == 0:
+#        for param_group in G_solver.param_groups:
+#            param_group['lr'] = param_group['lr'] * 0.8
+#        for param_group in D_solver.param_groups:
+#            param_group['lr'] = param_group['lr'] * 0.5
 
     # Print and plot every now and then
-    if it % 200 == 0:
+    if it % 500 == 0:
         fig, ax = plt.subplots()
 
         print('Iter-{}; D_accuracy_real/fake: {}/{}; G_accuracy: {}'.format(it, np.round(np.exp(-D_loss_real.data.tolist()[0]), 5),
