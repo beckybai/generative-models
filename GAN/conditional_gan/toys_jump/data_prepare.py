@@ -148,7 +148,7 @@ class Data_HD_Circle():
 
 
 class Mnist_10():
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, dataset_size=5000):
         self.batch_size = batch_size
         data_dir = "~/data/MNIST_data"
 
@@ -165,14 +165,14 @@ class Mnist_10():
         sorted_label = sorted(range(len(label_list)), key=lambda x: label_list[x])
         self.new_data_list = data_list[sorted_label]
         self.new_label_list = label_list[sorted_label]
-        self.fix_dig = 20# if you want to fix the dataset. this the number of the pictures you want to preserve in total. 20 = 10 * 2
-        class_num = 5000
-        self.fix_num = [int(class_num*random.random()) for _ in range(self.fix_dig)]
+        self.fix_dig = 100# if you want to fix the dataset. this the number of the pictures you want to preserve in total. 20 = 10 * 2
+        self.class_num = dataset_size
+        self.fix_num = [int(self.class_num*random.random()) for _ in range(self.fix_dig)]
         self.tmp_data = self._batch_next_fixed(self.fix_dig,shuffle=False)
 
 
     def _batch_next_fixed(self, size, label=list(range(10)), shuffle=True):
-        class_num = 5000
+ #       class_num = 5000
         class_num_stone = np.array([0,5924,12666,18624,24755,30597,
                                     36018,41936,48201,54052])
         ls = np.size(label)
@@ -197,13 +197,13 @@ class Mnist_10():
 
     def batch_next_fixed(self):
 
-        repeat_num = self.batch_size // 10
+        repeat_num = self.batch_size // self.fix_dig
         tmp_data = self.tmp_data.repeat(repeat_num, axis = 0)
         return tmp_data
 
 
     def batch_next(self, size, label=list(range(10)), shuffle=True):
-        class_num = 5000
+#        class_num = 5000
         class_num_stone = np.array([0,5924,12666,18624,24755,30597,
                                     36018,41936,48201,54052])
         ls = np.size(label)
@@ -213,7 +213,7 @@ class Mnist_10():
             return_list = np.zeros([size, 1, 28, 28])
             return_label = np.zeros([size])
             for i, il in enumerate(label):
-                index = [int(class_num * random.random()) for _ in range(unit)]
+                index = [int(self.class_num * random.random()) for _ in range(unit)]
                 index = class_num_stone[i].astype('int')+index
                 # index = class_num * il * np.ones(np.shape(index)).astype(int) + index
                 return_list[i * unit:(i + 1) * unit] = self.new_data_list[index]
@@ -225,7 +225,6 @@ class Mnist_10():
 
         # return [return_list, return_label]
         return return_list
-# testing code
 # data = Mnist_10(100)
 # tmp_data = data.batch_next()
 # mutil.save_picture_numpy(tmp_data,"./test.png")
