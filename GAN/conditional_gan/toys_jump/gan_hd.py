@@ -82,7 +82,6 @@ lr_interval = (right_line-left_line)/100.0
 
 G = model.G_Net(Z_dim, X_dim, h_dim).cuda()
 D = model.D_Net(X_dim, 1, h_dim).cuda()
-V = model.D_Net(X_dim, 1, h_dim).cuda()
 
 # G_fake = model.Direct_Net(X_dim+c_dim, 1, h_dim).cuda()
 # G.apply(model.weights_init)
@@ -93,8 +92,6 @@ V = model.D_Net(X_dim, 1, h_dim).cuda()
 lr = 1e-4
 G_solver = optim.Adam(G.parameters(), lr=1e-4,betas=[0.5,0.999])
 D_solver = optim.Adam(D.parameters(), lr=1e-4,betas=[0.5,0.999])
-V_solver = optim.Adam(V.parameters(), lr=1e-4,betas=[0.5,0.999])
-
 
 # G_solver = optim.SGD(G.parameters(), lr=1e-3)
 # D_solver = optim.SGD(D.parameters(), lr=1e-3)
@@ -173,18 +170,6 @@ for it in range(100000):
     #	c = Variable(torch.from_numpy(mutil.label_num2vec(c.astype('int')).astype('float32'))).cuda()
 
     D_solver.zero_grad()
-    V_solver.zero_grad()
-
-
-    gv_sample = G(z)
-
-
-
-
-
-
-
-
     # Dicriminator forward-loss-backward-update
     G_sample = G(z)
     D_real = D(X)

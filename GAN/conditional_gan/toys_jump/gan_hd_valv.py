@@ -28,7 +28,7 @@ if not os.path.exists(out_dir):
     shutil.copyfile(sys.argv[0], out_dir + '/training_script.py')
     shutil.copyfile("./toy_model.py", out_dir + "/toy_model.py")
     shutil.copyfile("./data_prepare.py", out_dir + "/data_prepare.py")
-    shutil.copyfile("./gan_hd.py", out_dir + "/gan_hd.py")
+    shutil.copyfile("./gan_hd_valv.py", out_dir + "/gan_hd_valv.py")
     shutil.copyfile("./gan.py", out_dir + "/gan.py")
 
 sys.stdout = mutil.Logger(out_dir)
@@ -43,7 +43,7 @@ sample_point = 10000
 # end_points = np.array([[1,0],[1,1],[1,2]])
 start_points = np.array([[0, 0]])
 end_points = np.array([[1, 0]])
-Z_dim = 10
+Z_dim = 20
 X_dim = 10
 h_dim = 128
 dim = 10
@@ -159,22 +159,50 @@ def get_grad(input, label, name, c=False, is_z=True, need_sample=False):
     else:
         return d_result
 
+def clean_all():
+    D_solver.zero_grad()
+    V_solver.zero_grad()
+    G_solver.zero_grad()
+
 
 for it in range(100000):
     # Sample data
     z = Variable(torch.randn(mb_size, Z_dim)).cuda()
     X = data.batch_next()  # with label
     X = Variable(torch.from_numpy(X.astype('float32'))).cuda()
-    #	c = Variable(torch.from_numpy(mutil.label_num2vec(c.astype('int')).astype('float32'))).cuda()
 
-    D_solver.zero_grad()
-    V_solver.zero_grad()
 
+    # Train V
+    clean_all()
     gv_sample = G(z)
+    V_false = V(gv_sample)
+    V_real = V(X)
+    V_loss_real = criterion(V_real, ones_label)
+    V_loss_fake = criterion(V_false, zeros_label)
+    V_loss = V_loss_real + V_loss_fake
+    V_loss.backward()
+    V_solver.step()
+
+
+    # Train D ( own a sampling process )
+    # prepare the input the D
+    selected_data = []
+    while len(selected_data) < mb_size:
+        X_ss = data.batch_next()
+        inputv = Variable(torch.from_numpy(X_ss.astype('float32')).cuda())
+        # input.copy_(real_gpu)
+        # inputv = Variable(input)
+        output = V(inputv).cpu().data.numpy()
+        for i in range(mb_size):
+            if np.random.random() < output[i]:
+                selected_data.append(X_ss[i])
+
+    # print(output[0:10])
+    X_s = Variable(-torch.FloatTensor(selected_data[:mb_size])).cuda()
 
     # Dicriminator forward-loss-backward-update
     G_sample = G(z)
-    D_real = D(X)
+    D_real = D(X_s)
     D_fake = D(G_sample)
 
     D_loss_real = criterion(D_real, ones_label)
@@ -203,20 +231,10 @@ for it in range(100000):
 
     # Housekeeping - reset gradient
     D.zero_grad()
-
-    # if it % 5000 == 0:
-    #	print(zc_fixed_cpu)
-
-    #     lr = lr * 0.8
-    #     for param_group in G_solver.param_groups:
-    #         param_group['lr'] = param_group['lr'] * 0.8
-    #     for param_group in D_solver.param_groups:
-    #         param_group['lr'] = param_group['lr'] * 0.5
-
     G.zero_grad()
 
     # Print and plot every now and then
-    if it % 2000 == 0:
+    if it % 500 == 0:
         fig, ax = plt.subplots()
 
         print('Iter-{}; D_accuracy_real/fake: {}/{}; G_accuracy: {}'.format(it, np.round(
